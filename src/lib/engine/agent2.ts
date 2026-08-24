@@ -1,6 +1,7 @@
 import type {
   EmotionKeyword,
   EnvironmentInput,
+  FragranceFamily,
   FragranceSKU,
   HealingNarrative,
   SceneMode,
@@ -90,25 +91,46 @@ function generateUsageGuide(scene: SceneMode): string {
   return guides[scene];
 }
 
-// ─── 冥想引导 ─────────────────────────────────────────────────
+// ─── 冥想引导（基于推荐香水香型，与氛围音效场景一致）──────────
 
+/**
+ * 根据推荐香水的香型家族生成冥想引导词
+ * 场景与 ambientAudio.ts 中的香型→氛围映射完全对齐：
+ *   citrus  → 水晶清澈（明亮光芒）
+ *   floral  → 花瓣梦境（花园漫步）
+ *   woody   → 森林扎根（林间漫步）
+ *   oriental→ 温暖拥抱（琥珀暖光）
+ *   fresh   → 细雨宁静（雨中漫步）
+ *   aromatic→ 海洋抚慰（海岸潮汐）
+ *   chypre  → 森林扎根（苔藓大地）
+ *   fougere → 细雨宁静（草本清露）
+ */
 function generateMeditationGuide(
-  emotions: EmotionKeyword[],
-  scene: SceneMode
+  fragranceFamily: FragranceFamily,
+  emotions: EmotionKeyword[]
 ): string {
-  const hasAnxious = emotions.includes("anxious") || emotions.includes("irritated");
-  const hasSad = emotions.includes("sad") || emotions.includes("tired");
+  const emotionLabel = emotions.length > 0
+    ? `带着此刻的${emotions.map((e) => {
+        const m: Record<EmotionKeyword, string> = {
+          happy: "愉悦", calm: "平和", irritated: "烦躁", anxious: "不安",
+          sad: "忧伤", energetic: "活力", tired: "疲倦", romantic: "柔情",
+        };
+        return m[e];
+      }).join("与")}`
+    : "此刻";
 
-  if (hasAnxious) {
-    return `闭上眼睛，想象你正站在一片广阔的薰衣草田中。微风带着花香拂过面颊，每一次呼吸都在带走紧绷，带入宁静。吸气 4 秒，屏息 4 秒，呼气 6 秒。重复三次，感受焦虑如晨雾般消散。`;
-  }
-  if (hasSad) {
-    return `找一个舒适的姿势，轻轻闭上眼睛。想象温暖的琥珀色光芒从心口升起，如同被最柔软的面料包裹。每一次呼吸，这份温暖都在扩散，允许自己感受这份被允许的安全。你值得被温柔以待。`;
-  }
-  if (scene === "sleep_relax") {
-    return `平躺，双手放在腹部。感受呼吸的起伏如同海浪，每一次呼气都让身体更深地沉入柔软的床铺。从脚趾开始，逐步放松每一寸肌肉，直到头顶也融化在这片宁静中。`;
-  }
-  return `安静地坐着，将注意力集中在呼吸上。感受香气分子进入鼻腔，沿着嗅觉神经传递到大脑的边缘系统——那里是你的情绪中枢。每一次呼吸，你都在与自己对话。`;
+  const guides: Record<FragranceFamily, string> = {
+    citrus: `闭上眼睛，${emotionLabel}。想象一道清澈的光从头顶倾泻而下，如同清晨第一缕阳光穿透水晶棱镜，在空气中折射出无数细小的光点。每一次呼吸，这些光点都在洗涤你的思绪，留下一片澄明。吸气 4 秒，屏息 4 秒，呼气 6 秒，让柑橘的清新分子唤醒每一个细胞。`,
+    floral: `闭上眼睛，${emotionLabel}。想象你正漫步在一座盛放的花园中——玫瑰、鸢尾、橙花在脚下铺展开来。微风拂过，花瓣轻旋，每一次呼吸都将花香收入心底。放慢脚步，允许自己被这片柔软包围。吸气 4 秒，屏息 4 秒，呼气 6 秒，感受紧绷在花香中一点点消融。`,
+    woody: `闭上眼睛，${emotionLabel}。想象你正走进一片古老的森林，脚下是松软的苔藓与落叶，头顶是层层叠叠的树冠。阳光从枝叶间洒落，形成一道道温暖的光柱。你的双脚稳稳地踩在大地上，每一次呼气都让你扎得更深。吸气 4 秒，屏息 4 秒，呼气 6 秒，感受大地的沉稳从脚底升起。`,
+    oriental: `闭上眼睛，${emotionLabel}。想象一团温暖的琥珀色光芒从心口缓缓升起，如同被最柔软的面料轻轻包裹。空气中弥漫着香草与树脂的暖意，每一次呼吸都让这份温暖向四周扩散。允许自己感受这份安全——你值得被温柔以待。吸气 4 秒，屏息 4 秒，呼气 6 秒，让温暖渗透每一寸肌肤。`,
+    fresh: `闭上眼睛，${emotionLabel}。想象你正漫步在一场温柔的细雨中，雨丝轻触面颊，空气清透如洗。每一滴雨水都在带走疲惫与杂念，留下的是雨后泥土与青草的清新。深呼吸，让这份洁净贯穿全身。吸气 4 秒，屏息 4 秒，呼气 6 秒，感受身心如雨洗般澄净。`,
+    aromatic: `闭上眼睛，${emotionLabel}。想象你正站在一片辽阔的海岸线上，海浪有节奏地涌来又退去。海风带着咸湿的清新拂过面颊，每一次潮起潮落都在带走紧绷，带入宁静。让呼吸与海浪同频——吸气时海浪涌来，呼气时海浪退去。重复三次，感受焦虑如退潮般消散。`,
+    chypre: `闭上眼睛，${emotionLabel}。想象你正赤脚走在一片湿润的森林苔藓上，脚下是柔软而厚实的大地。空气中弥漫着橡木苔与广藿香的泥土气息，头顶是参天古木交织的绿色穹顶。每一次呼气，你都与这片大地连接得更深。吸气 4 秒，屏息 4 秒，呼气 6 秒，感受根基从脚底向下延伸。`,
+    fougere: `闭上眼睛，${emotionLabel}。想象你正站在一片雨后的草地上，空气中弥漫着薰衣草与香豆素的清甜。远处的山峦在薄雾中若隐若现，脚下的青草沾满了露珠。每一次呼吸都是大自然的馈赠，清新而治愈。吸气 4 秒，屏息 4 秒，呼气 6 秒，让草本的芬芳唤醒内在的宁静。`,
+  };
+
+  return guides[fragranceFamily];
 }
 
 // ─── 情绪引导语 ─────────────────────────────────────────────
@@ -181,7 +203,7 @@ export function generateHealingNarrative(
     todayStatus: generateTodayStatus(env, emotions, scene, agent1Result),
     scentCombination: generateScentCombination(topFragrance, env),
     usageGuide: generateUsageGuide(scene),
-    meditationGuide: generateMeditationGuide(emotions, scene),
+    meditationGuide: generateMeditationGuide(topFragrance.family, emotions),
     emotionalGuidance: generateEmotionalGuidance(emotions),
     commercialCTA: generateCommercialCTA(topFragrance),
   };

@@ -199,17 +199,9 @@ export function resolveSoundscape(
   emotions: EmotionKeyword[],
   fragranceFamily: FragranceFamily
 ): SoundscapeType {
-  // 取第一个情绪的主氛围
-  const emotionScape = emotions.length > 0
-    ? EMOTION_SOUNDSCAPE[emotions[0]]
-    : "rain_calm";
+  // 以香型为主（引导词场景与音效场景必须一致）
   const familyScape = FAMILY_SOUNDSCAPE[fragranceFamily];
-
-  // 如果情绪和香型指向同一个氛围，直接用
-  if (emotionScape === familyScape) return emotionScape;
-
-  // 否则以情绪为主（用户当前感受优先于香型特征）
-  return emotionScape;
+  return familyScape;
 }
 
 // ─── 音频引擎类 ─────────────────────────────────────────────
