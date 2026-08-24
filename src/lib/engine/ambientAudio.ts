@@ -290,8 +290,8 @@ export class AmbientAudioEngine {
   private masterGain: GainNode | null = null;
   private isRunning = false;
 
-  /** 启动氛围音效（可传入情绪来微调音色） */
-  start(soundscape: SoundscapeType, emotions: EmotionKeyword[] = []) {
+  /** 启动氛围音效（可传入情绪来微调音色，volumeScale 控制总音量） */
+  start(soundscape: SoundscapeType, emotions: EmotionKeyword[] = [], volumeScale = 1) {
     if (this.isRunning) this.stop();
 
     // 基础参数 + 情绪微调
@@ -304,9 +304,10 @@ export class AmbientAudioEngine {
     this.masterGain.gain.value = 0;
     this.masterGain.connect(this.ctx.destination);
 
-    // 淡入（情绪越不安，淡入越慢）
+    // 淡入（情绪越不安，淡入越慢；音量按需缩放）
+    const target = Math.min(1, Math.max(0, volumeScale));
     this.masterGain.gain.linearRampToValueAtTime(
-      1, this.ctx.currentTime + emotionMod.fadeInSeconds
+      target, this.ctx.currentTime + emotionMod.fadeInSeconds
     );
 
     // 1. 铺底音色（双振荡器 + 失谐）

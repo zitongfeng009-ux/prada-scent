@@ -6,41 +6,35 @@ import {
   AmbientAudioEngine,
   resolveSoundscape,
   soundscapeDescription,
-  type SoundscapeType,
 } from "@/lib/engine/ambientAudio";
 
 /**
  * 沉浸式冥想播放器
- * 根据用户情绪 + 推荐香型 自动生成匹配的氛围音效
- * 同时提供 UCLA 免费引导冥想音频
+ *
+ * 模式一「氛围音效」：Web Audio API 根据香型+情绪实时生成
+ * 模式二「语音引导」：浏览器中文语音（SpeechSynthesis）朗读
+ *   基于推荐香型生成的引导词，句间留白，同时低音量播放氛围背景
  */
 
-// UCLA 引导冥想音频（Creative Commons CC BY-NC-ND 4.0）
-const GUIDED_TRACKS = [
-  {
-    id: "breathing",
-    title: "呼吸引导冥想",
-    subtitle: "Breathing Meditation · UCLA Mindful",
-    url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/01_Breathing_Meditation.mp3",
-    duration: 300,
-  },
-  {
-    id: "body-scan",
-    title: "身体扫描冥想",
-    subtitle: "Short Body Scan · UCLA Mindful",
-    url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/Body-Scan-Meditation.mp3",
-    duration: 180,
-  },
-  {
-    id: "body-sound",
-    title: "身音冥想",
-    subtitle: "Body and Sound · UCLA Mindful",
-    url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/Body-Sound-Meditation.mp3",
-    duration: 180,
-  },
-];
-
 type PlayMode = "ambient" | "guided";
+
+/** 语音引导：语速（低于正常，营造冥想节奏） */
+const SPEECH_RATE = 0.72;
+/** 语音引导：句间停顿毫秒 */
+const SENTENCE_PAUSE_MS = 2600;
+/** 语音引导：背景氛围音量（低音量铺底） */
+const GUIDED_BG_VOLUME = 0.35;
+
+/** 将中文文本按句切分 */
+function splitSentences(text: string): string[] {
+  return text.match(/[^。！？]+[。！？]?/g)?.map((s) => s.trim()) ?? [text];
+}
+
+/** 估算语音引导总时长（秒）：语速约 2.5 字/秒 + 句间停顿 */
+function estimateGuidedDuration(text: string): number {
+  const sentences = splitSentences(text);
+  return Math.round(text.length / 2.5 + sentences.length * (SENTENCE_PAUSE_MS / 1000));
+}
 
 export function MeditationPlayer({
   guideText,
@@ -55,24 +49,112 @@ export function MeditationPlayer({
   const [progress, setProgress] = useState(0);
   const [showText, setShowText] = useState(false);
   const [playMode, setPlayMode] = useState<PlayMode>("ambient");
-  const [currentTrack, setCurrentTrack] = useState(0);
+  const [hasChineseVoice, setHasChineseVoice] = useState(true);
 
   const engineRef = useRef<AmbientAudioEngine | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const animFrameRef = useRef<number | null>(null);
+  const stopRequestedRef = useRef(false);
 
   // 根据香型解析氛围场景（与引导词一致），情绪微调音色
-  const soundscape: SoundscapeType = resolveSoundscape(emotions, fragranceFamily);
+  const soundscape = resolveSoundscape(emotions, fragranceFamily);
   const soundscapeLabel = soundscapeDescription(soundscape, emotions);
-  const track = GUIDED_TRACKS[currentTrack];
+  const guidedDuration = estimateGuidedDuration(guideText);
 
-  // 初始化氛围引擎
+  // 初始化氛围引擎 + 检测中文语音
   useEffect(() => {
     engineRef.current = new AmbientAudioEngine();
+
+    // SpeechSynthesis 语音列表可能异步加载
+    const checkVoices = () => {
+      if (typeof window === "undefined" || !window.speechSynthesis) {
+        setHasChineseVoice(false);
+        return;
+      }
+      const voices = window.speechSynthesis.getVoices();
+      setHasChineseVoice(voices.length === 0 || voices.some((v) => v.lang.startsWith("zh")));
+    };
+    checkVoices();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.addEventListener("voiceschanged", checkVoices);
+    }
+
     return () => {
+      stopRequestedRef.current = true;
       engineRef.current?.stop();
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.removeEventListener("voiceschanged", checkVoices);
+      }
     };
   }, []);
+
+  /** 选择中文语音（优先 zh-CN） */
+  const pickChineseVoice = (): SpeechSynthesisVoice | null => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    return (
+      voices.find((v) => v.lang === "zh-CN") ||
+      voices.find((v) => v.lang.startsWith("zh")) ||
+      null
+    );
+  };
+
+  /** 朗读一句话（Promise 在朗读结束时 resolve） */
+  const speakSentence = (text: string) =>
+    new Promise<void>((resolve) => {
+      if (typeof window === "undefined" || !window.speechSynthesis) {
+        resolve();
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "zh-CN";
+      utterance.rate = SPEECH_RATE;
+      utterance.pitch = 0.9;
+      const voice = pickChineseVoice();
+      if (voice) utterance.voice = voice;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      window.speechSynthesis.speak(utterance);
+    });
+
+  const waitMs = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  /** 停止所有播放 */
+  const stopAll = useCallback(() => {
+    stopRequestedRef.current = true;
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    engineRef.current?.stop();
+  }, []);
+
+  /** 语音引导模式：逐句朗读 + 句间留白 + 低音量氛围背景 */
+  const startGuided = useCallback(async () => {
+    stopRequestedRef.current = false;
+    // 低音量氛围背景（与引导词同场景）
+    engineRef.current?.start(soundscape, emotions, GUIDED_BG_VOLUME);
+
+    const sentences = splitSentences(guideText);
+    for (let i = 0; i < sentences.length; i++) {
+      if (stopRequestedRef.current) return;
+      setProgress(Math.round((i / sentences.length) * 100));
+      await speakSentence(sentences[i]);
+      if (stopRequestedRef.current) return;
+      // 最后一句后不再停顿
+      if (i < sentences.length - 1) {
+        await waitMs(SENTENCE_PAUSE_MS);
+      }
+    }
+    if (stopRequestedRef.current) return;
+
+    // 朗读结束：淡出背景，回到初始状态
+    setProgress(100);
+    engineRef.current?.stop();
+    await waitMs(1200);
+    if (stopRequestedRef.current) return;
+    setIsPlaying(false);
+    setProgress(0);
+  }, [soundscape, emotions, guideText]);
 
   // 播放/暂停
   const togglePlay = useCallback(() => {
@@ -80,84 +162,32 @@ export function MeditationPlayer({
       setShowText(true);
       if (playMode === "ambient") {
         engineRef.current?.start(soundscape, emotions);
+        setIsPlaying(true);
       } else {
-        const audio = new Audio(track.url);
-        audio.play().catch(() => {});
-        audioRef.current = audio;
-        // 同步进度
-        const sync = () => {
-          if (audio.duration && !isNaN(audio.duration)) {
-            setProgress((audio.currentTime / audio.duration) * 100);
-          }
-          animFrameRef.current = requestAnimationFrame(sync);
-        };
-        animFrameRef.current = requestAnimationFrame(sync);
-        audio.addEventListener("ended", () => {
-          setIsPlaying(false);
-          setProgress(0);
-          if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-        });
+        setIsPlaying(true);
+        void startGuided();
       }
     } else {
-      // 暂停
-      if (playMode === "ambient") {
-        engineRef.current?.stop();
-      } else {
-        audioRef.current?.pause();
-        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      }
+      stopAll();
+      setIsPlaying(false);
+      setProgress(0);
     }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying, playMode, soundscape, track.url, emotions]);
+  }, [isPlaying, playMode, soundscape, emotions, startGuided, stopAll]);
 
   // 切换模式
   const switchMode = (mode: PlayMode) => {
     if (isPlaying) {
-      if (playMode === "ambient") engineRef.current?.stop();
-      else {
-        audioRef.current?.pause();
-        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      }
+      stopAll();
       setIsPlaying(false);
       setProgress(0);
     }
     setPlayMode(mode);
   };
 
-  // 切换引导冥想曲目
-  const switchTrack = (index: number) => {
-    if (isPlaying && playMode === "guided") {
-      audioRef.current?.pause();
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      setIsPlaying(false);
-      setProgress(0);
-    }
-    setCurrentTrack(index);
-  };
-
-  // 清理
-  useEffect(() => {
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      audioRef.current?.pause();
-    };
-  }, []);
-
-  const formatTime = (pct: number) => {
-    const dur = playMode === "guided" ? track.duration : 300;
-    const seconds = Math.floor((pct / 100) * dur);
+  const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
+    const s = Math.round(seconds) % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const formatDuration = () => {
-    if (playMode === "guided") {
-      const m = Math.floor(track.duration / 60);
-      const s = track.duration % 60;
-      return `${m}:${s.toString().padStart(2, "0")}`;
-    }
-    return "∞";
   };
 
   return (
@@ -178,10 +208,12 @@ export function MeditationPlayer({
           className="text-sm tracking-[0.1em]"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
-          {playMode === "ambient" ? soundscapeLabel : track.title}
+          {playMode === "ambient" ? soundscapeLabel : "中文语音引导冥想"}
         </h3>
         {playMode === "guided" && (
-          <p className="text-[9px] text-neutral-400 mt-1">{track.subtitle}</p>
+          <p className="text-[9px] text-neutral-400 mt-1">
+            背景氛围：{soundscapeLabel}
+          </p>
         )}
         {playMode === "ambient" && (
           <p className="text-[9px] text-neutral-400 mt-1">
@@ -220,7 +252,7 @@ export function MeditationPlayer({
             borderRadius: "0px",
           }}
         >
-          引导冥想
+          语音引导
         </button>
       </div>
 
@@ -274,7 +306,7 @@ export function MeditationPlayer({
           style={{ background: "rgba(13,13,13,0.1)" }}
         >
           <div
-            className="absolute left-0 top-0 h-full transition-all duration-100"
+            className="absolute left-0 top-0 h-full transition-all duration-300"
             style={{
               width: `${progress}%`,
               background: "#A8C3A0",
@@ -283,35 +315,22 @@ export function MeditationPlayer({
         </div>
         <div className="flex justify-between mt-2">
           <span className="text-[9px] text-neutral-400 tabular-nums">
-            {formatTime(progress)}
+            {formatTime((progress / 100) * (playMode === "guided" ? guidedDuration : 300))}
           </span>
           <span className="text-[9px] text-neutral-400 tabular-nums">
-            {formatDuration()}
+            {playMode === "guided" ? formatTime(guidedDuration) : "∞"}
           </span>
         </div>
       </div>
 
-      {/* 引导冥想曲目选择（仅引导模式） */}
+      {/* 语音引导信息（仅引导模式） */}
       {playMode === "guided" && (
-        <div className="flex justify-center gap-2 mb-5">
-          {GUIDED_TRACKS.map((t, i) => (
-            <button
-              key={t.id}
-              onClick={() => switchTrack(i)}
-              className="text-[8px] tracking-[0.08em] px-2 py-1 transition-all duration-300"
-              style={{
-                background: i === currentTrack ? "#0D0D0D" : "transparent",
-                color: i === currentTrack ? "#F7F6F2" : "#999",
-                border:
-                  i === currentTrack
-                    ? "1px solid #0D0D0D"
-                    : "1px solid rgba(13,13,13,0.15)",
-                borderRadius: "0px",
-              }}
-            >
-              {t.title}
-            </button>
-          ))}
+        <div className="text-center mb-5">
+          <p className="text-[8px] text-neutral-400 tracking-wide">
+            {hasChineseVoice
+              ? "引导词基于推荐香型生成 · 逐句朗读 · 句间留白"
+              : "当前浏览器缺少中文语音，将仅播放背景氛围"}
+          </p>
         </div>
       )}
 
@@ -341,7 +360,7 @@ export function MeditationPlayer({
         <p className="text-[7px] text-neutral-300 tracking-wide">
           {playMode === "ambient"
             ? "氛围音效由 Web Audio API 实时生成"
-            : "引导音频：UCLA Mindful · Diana Winston · CC BY-NC-ND 4.0"}
+            : "中文语音由浏览器语音合成生成 · 背景音效 Web Audio API 实时生成"}
         </p>
       </div>
     </div>
