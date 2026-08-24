@@ -1,0 +1,291 @@
+import type { FragranceSKU } from "../types";
+
+/**
+ * Prada 香氛知识库 — 基于 Prada 官网 & 香水时代真实数据
+ * 数据来源：prada.cn、nosetime.com、fragrantica.com
+ * 最后更新：2026-08-23
+ */
+export const fragranceDatabase: FragranceSKU[] = [
+  // ═══════════════════════════════════════════════════════════
+  // 女士香水
+  // ═══════════════════════════════════════════════════════════
+
+  {
+    id: "prada-paradoxe",
+    brand: "Prada",
+    name: "Prada Paradoxe 我本莫测",
+    collection: "Paradoxe",
+    family: "oriental",
+    notes: {
+      top: ["梨", "蜜橘", "香柠檬"],
+      heart: ["橙花", "橙花油", "茉莉"],
+      base: ["香草", "琥珀(Ambrofix)", "白麝香(Serenolide)", "安息香脂"],
+    },
+    volatility: "medium",
+    tempRange: { min: 10, max: 30 },
+    effects: ["uplifting", "confidence", "warmth"],
+    scenes: ["social_boost", "deep_work", "commute_subway"],
+    suitableEmotions: ["happy", "calm", "energetic", "romantic"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1351/2HDZF0Z99/1A1351_2HDZ_F0Z99_P_ML030_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/paradoxe-edp-30-ml/1A1351_2HDZ_F0Z99_P_ML030",
+    story:
+      "花香调琥珀香氛，融合标志性成分的矛盾碰撞。一级萃取的橙花花蕾精华重塑 Prada 的曼妙清新之感，藉由生物转化工艺制取的琥珀(Ambrofix)颠覆感官，麝香分子蜕变为白麝香(Serenolide)，释放浓郁而微妙的怡人香韵。「我唯一害怕的是无聊」——Miuccia Prada 女士。",
+  },
+  {
+    id: "prada-paradoxe-radical-essence",
+    brand: "Prada",
+    name: "Prada Paradoxe Radical Essence 我本莫测精醇",
+    collection: "Paradoxe",
+    family: "woody",
+    notes: {
+      top: ["橙花油", "橙花"],
+      heart: ["开心果"],
+      base: ["檀香木"],
+    },
+    volatility: "low",
+    tempRange: { min: 5, max: 25 },
+    effects: ["grounding", "comfort", "introspection"],
+    scenes: ["sleep_relax", "mercury_reversal"],
+    suitableEmotions: ["calm", "sad", "anxious", "romantic"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1355/2H0PF0Z99/1A1355_2H0P_F0Z99_P_ML030_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/paradoxe-radical-essence-edp-30-ml/1A1355_2H0P_F0Z99_P_ML030",
+    story:
+      "重新诠释甜香调的意外惊喜。在一款精致的香水中浓缩了意想不到的甜香调，橙花的清新与开心果的坚果甜香交织，檀香木的温润收尾带来被包裹的安全感。适合在寒冷的日子里，用温暖的木质花香包裹自己。",
+  },
+  {
+    id: "prada-candy",
+    brand: "Prada",
+    name: "Prada Candy 卡迪小姐",
+    collection: "Candy",
+    family: "oriental",
+    notes: {
+      top: ["焦糖"],
+      heart: ["脂粉麝香"],
+      base: ["安息香脂", "香草"],
+    },
+    volatility: "low",
+    tempRange: { min: 5, max: 22 },
+    effects: ["comfort", "playful", "warmth"],
+    scenes: ["sleep_relax", "mercury_reversal"],
+    suitableEmotions: ["sad", "anxious", "romantic", "tired"],
+    imageUrl: "/fragrances/prada-candy.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/womens/accessories/fragrances/c/10573CN",
+    story:
+      "焦糖的甜蜜拥抱，如同回到最安心的港湾。Prada 以大胆而俏皮的方式重新诠释焦糖香调，脂粉麝香增添柔美层次，安息香脂与香草的基调带来持久而温暖的余韵。在寒冷的日子里，用甜蜜的温暖包裹自己，找到属于自己的小确幸。",
+  },
+  {
+    id: "prada-infusion-iris",
+    brand: "Prada",
+    name: "Prada Les Infusions 浮梦鸢尾",
+    collection: "Les Infusions",
+    family: "woody",
+    notes: {
+      top: ["鸢尾花"],
+      heart: ["橙花油", "橘子"],
+      base: ["安息香脂"],
+    },
+    volatility: "low",
+    tempRange: { min: 10, max: 30 },
+    effects: ["calming", "elegance", "focus"],
+    scenes: ["deep_work", "commute_subway", "social_boost"],
+    suitableEmotions: ["calm", "anxious", "irritated"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1041/2HCQF0Z99/1A1041_2HCQ_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/les-infusions-iris-edp-100-ml/1A1041_2HCQ_F0Z99_P_ML100",
+    story:
+      "Infusion 系列的灵魂之作。鸢尾花是 Prada 的标志性香材，以极简主义美学呈现其纯净与优雅。辨识度极高的脂粉感，如同妈妈怀里的味道，温馨而安心。知性温柔的气息，帮助你在纷繁中找到内心的秩序。",
+  },
+  {
+    id: "prada-infusion-cedre",
+    brand: "Prada",
+    name: "Prada Infusion 融雪松木",
+    collection: "Les Infusions",
+    family: "woody",
+    notes: {
+      top: ["鸢尾花", "橙花油"],
+      heart: ["雪松"],
+      base: ["焚香", "安息香脂", "香根草"],
+    },
+    volatility: "low",
+    tempRange: { min: 5, max: 28 },
+    effects: ["grounding", "calming", "introspection"],
+    scenes: ["sleep_relax", "mercury_reversal", "deep_work"],
+    suitableEmotions: ["calm", "sad", "irritated", "anxious"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1042/2HCPF0Z99/1A1042_2HCP_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/prada-infusion-cedre-edp-100-ml/1A1042_2HCP_F0Z99_P_ML100",
+    story:
+      "鸢尾与雪松如走钢索般寻求微妙的平衡，橙花油带来清新的开场，焚香的烟熏感与安息香脂的温润在基底交织。活力满满的木质花香，另辟蹊径以柑橘和木质调香气对鸢尾女王进行别致解读。",
+  },
+  {
+    id: "prada-infusion-gingembre",
+    brand: "Prada",
+    name: "Prada Infusion 辛爽生姜",
+    collection: "Les Infusions",
+    family: "fresh",
+    notes: {
+      top: ["绿橘"],
+      heart: ["生姜", "天竺葵"],
+      base: ["香根草"],
+    },
+    volatility: "high",
+    tempRange: { min: 20, max: 40 },
+    effects: ["refreshing", "energizing", "clarity"],
+    scenes: ["deep_work", "commute_subway", "outdoor_park"],
+    suitableEmotions: ["happy", "energetic", "tired", "anxious"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1053/2HEDF0Z99/1A1053_2HED_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/prada-infusion-de-gingembre-edp-100-ml/1A1053_2HED_F0Z99_P_ML100",
+    story:
+      "将生姜的活力个性糅入木质柑橘的芬芳中。生姜因子轻裹于标志性的麝香和柑橘调制溶液，焕新经典香韵。绿橘的清爽开场如同春天的第一缕阳光，生姜的辛辣与天竺葵的花香交织，香根草的木质基底带来沉稳收尾。唯一款只以生姜作为主角的香水，小众不撞香。",
+  },
+  {
+    id: "prada-infusion-neroli",
+    brand: "Prada",
+    name: "Prada Infusion 浅醉橙花",
+    collection: "Les Infusions",
+    family: "citrus",
+    notes: {
+      top: ["橙花"],
+      heart: ["橘子", "白松香"],
+      base: ["橙花油"],
+    },
+    volatility: "high",
+    tempRange: { min: 18, max: 38 },
+    effects: ["refreshing", "uplifting", "confidence"],
+    scenes: ["social_boost", "outdoor_park", "commute_subway"],
+    suitableEmotions: ["happy", "calm", "energetic"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1043/2HCJF0Z99/1A1043_2HCJ_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/prada-infusion-fleur-doranger-edp-100-ml/1A1043_2HCJ_F0Z99_P_ML100",
+    story:
+      "Infusion 系列对橙花的诗意解读。清新的橙花开场，橘子的果香与白松香的绿意交织，最终以纯净的橙花油收尾。如同地中海午后的阳光，温暖而不腻，清新而不冷。",
+  },
+  {
+    id: "prada-infusion-rose",
+    brand: "Prada",
+    name: "Prada Infusion 浴水玫瑰",
+    collection: "Les Infusions",
+    family: "floral",
+    notes: {
+      top: ["玫瑰"],
+      heart: ["橘子", "白松香"],
+      base: ["橙花油"],
+    },
+    volatility: "medium",
+    tempRange: { min: 12, max: 30 },
+    effects: ["romantic", "feminine", "calming"],
+    scenes: ["sleep_relax", "social_boost"],
+    suitableEmotions: ["happy", "romantic", "calm"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1048/2HCMF0Z99/1A1048_2HCM_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/prada-infusion-rose-edp-100-ml/1A1048_2HCM_F0Z99_P_ML100",
+    story:
+      "Infusion 系列对玫瑰的极简诠释。不追求繁复的花束效果，而是捕捉玫瑰最纯净的一面。橘子的清新与白松香的绿意让玫瑰不再甜腻，橙花油的基底带来干净的收尾。",
+  },
+  {
+    id: "prada-infusion-vanille",
+    brand: "Prada",
+    name: "Prada Infusion 夜雨香草",
+    collection: "Les Infusions",
+    family: "oriental",
+    notes: {
+      top: ["香草"],
+      heart: ["安息香脂"],
+      base: ["檀香木", "麝香"],
+    },
+    volatility: "low",
+    tempRange: { min: 5, max: 25 },
+    effects: ["comfort", "warmth", "grounding"],
+    scenes: ["sleep_relax", "mercury_reversal"],
+    suitableEmotions: ["sad", "anxious", "tired", "romantic"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1050/2HDXF0Z99/1A1050_2HDX_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/prada-infusion-de-vanille-edp-100-ml/1A1050_2HDX_F0Z99_P_ML100",
+    story:
+      "如同雨夜窗边的一杯香草拿铁。Infusion 系列将香草从甜腻的刻板印象中解放出来，安息香脂的烟熏感与檀香木的温润让香草变得深沉而有层次。适合在需要被温暖包裹的夜晚使用。",
+  },
+  {
+    id: "prada-infusion-ylang",
+    brand: "Prada",
+    name: "Prada Infusion 轻雾依兰",
+    collection: "Les Infusions",
+    family: "floral",
+    notes: {
+      top: ["依兰"],
+      heart: ["橙花油", "茉莉"],
+      base: ["白麝香", "檀香木"],
+    },
+    volatility: "medium",
+    tempRange: { min: 15, max: 32 },
+    effects: ["romantic", "feminine", "calming"],
+    scenes: ["sleep_relax", "social_boost"],
+    suitableEmotions: ["calm", "romantic", "happy"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1051/2HDWF0Z99/1A1051_2HDW_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/prada-infusion-ylang-edp-100-ml/1A1051_2HDW_F0Z99_P_ML100",
+    story:
+      "依兰花的异域风情在 Infusion 系列中被轻柔化处理。如薄雾般轻盈的花香，橙花油与茉莉的白花香调增添层次，白麝香与檀香木的基底让这份柔美不会过于甜腻。",
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // 男士香水
+  // ═══════════════════════════════════════════════════════════
+
+  {
+    id: "prada-luna-rossa-ocean",
+    brand: "Prada",
+    name: "Prada Luna Rossa Ocean 红月海洋",
+    collection: "Luna Rossa",
+    family: "aromatic",
+    notes: {
+      top: ["香柠檬", "粉红胡椒", "艾蒿"],
+      heart: ["薰衣草", "鸢尾花", "鼠尾草", "绒面革", "藏红花"],
+      base: ["麝香", "香根草", "广藿香"],
+    },
+    volatility: "medium",
+    tempRange: { min: 15, max: 38 },
+    effects: ["energizing", "confidence", "freshness"],
+    scenes: ["outdoor_park", "commute_subway", "social_boost", "deep_work"],
+    suitableEmotions: ["happy", "energetic", "tired"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/2/2A1/2A1156/2D00F0Z99/2A1156_2D00_F0Z99_P_ML050_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/luna-rossa-ocean-edt-50-ml/2A1156_2D00_F0Z99_P_ML050",
+    story:
+      "出自 IFF 调香大师 Anne Flipo 与 Carlos Benaim 之手。佛手柑的性感魅惑与香根草的馥郁雅致形成热烈碰撞，鸢尾的优雅迷情藏于中调，薰衣草和鼠尾草带来清新澄澈质感，奇特的皮革中调营造第二皮肤效果。广藿香、海地香根草与麝香巧妙调和，漫溢阳刚气息。",
+  },
+  {
+    id: "prada-luna-rossa-carbon",
+    brand: "Prada",
+    name: "Prada Luna Rossa Carbon 红月炫黑",
+    collection: "Luna Rossa",
+    family: "aromatic",
+    notes: {
+      top: ["香柠檬", "胡椒"],
+      heart: ["薰衣草"],
+      base: ["降龙涎香醚(Ambroxan)", "广藿香"],
+    },
+    volatility: "medium",
+    tempRange: { min: 10, max: 35 },
+    effects: ["energizing", "confidence", "freshness"],
+    scenes: ["deep_work", "commute_subway", "social_boost"],
+    suitableEmotions: ["happy", "energetic", "calm"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/2/2A1/2A1154/2HC6F0Z99/2A1154_2HC6_F0Z99_P_ML050_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/luna-rossa-carbon-edt-50-ml/2A1154_2HC6_F0Z99_P_ML050",
+    story:
+      "从 Prada 标志性的高技术材料中获取创意灵感。香柠檬与胡椒的清新辛辣开场，薰衣草的芳香带来平衡，降龙涎香醚与广藿香的基底散发深沉而现代的男性气息。如同撕开新电子产品薄膜时散发出的金属质感——未来与自然的完美融合。",
+  },
+  {
+    id: "prada-lhomme",
+    brand: "Prada",
+    name: "Prada L'Homme 绅士",
+    collection: "L'Homme",
+    family: "woody",
+    notes: {
+      top: ["橙花油", "胡椒", "小豆蔻", "胡萝卜籽"],
+      heart: ["鸢尾花", "紫罗兰", "天竺葵", "马黛茶"],
+      base: ["琥珀", "雪松", "广藿香", "檀香木"],
+    },
+    volatility: "low",
+    tempRange: { min: 10, max: 30 },
+    effects: ["elegance", "confidence", "sophistication"],
+    scenes: ["deep_work", "social_boost", "commute_subway"],
+    suitableEmotions: ["calm", "happy", "energetic"],
+    imageUrl: "https://www.prada.com/content/dam/pradabkg_products/2/2A1/2A1251/2HC0F0Z99/2A1251_2HC0_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+    purchaseUrl: "https://www.prada.cn/cn/zh/p/lhomme-prada-edt-100-ml/2A1251_2HC0_F0Z99_P_ML100",
+    story:
+      "以男士馥奇(Fougère)的经典成分调制，包括橙花、天竺葵和广藿香，同时糅合 Prada 的标志性男女通用香调——鸢尾和琥珀。多种独特香调精心混合，梦幻而又张扬，高贵而又迷人。2017年 GQ 英国男士美容大奖最佳香氛得主。",
+  },
+];
