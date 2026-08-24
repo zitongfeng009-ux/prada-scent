@@ -5,7 +5,7 @@ import type { EmotionKeyword, FragranceFamily } from "@/lib/types";
 import {
   AmbientAudioEngine,
   resolveSoundscape,
-  SOUNDSCAPE_LABEL,
+  soundscapeDescription,
   type SoundscapeType,
 } from "@/lib/engine/ambientAudio";
 
@@ -61,9 +61,9 @@ export function MeditationPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  // 根据情绪+香型解析氛围
+  // 根据香型解析氛围场景（与引导词一致），情绪微调音色
   const soundscape: SoundscapeType = resolveSoundscape(emotions, fragranceFamily);
-  const soundscapeLabel = SOUNDSCAPE_LABEL[soundscape];
+  const soundscapeLabel = soundscapeDescription(soundscape, emotions);
   const track = GUIDED_TRACKS[currentTrack];
 
   // 初始化氛围引擎
@@ -79,7 +79,7 @@ export function MeditationPlayer({
     if (!isPlaying) {
       setShowText(true);
       if (playMode === "ambient") {
-        engineRef.current?.start(soundscape);
+        engineRef.current?.start(soundscape, emotions);
       } else {
         const audio = new Audio(track.url);
         audio.play().catch(() => {});
@@ -108,7 +108,7 @@ export function MeditationPlayer({
       }
     }
     setIsPlaying(!isPlaying);
-  }, [isPlaying, playMode, soundscape, track.url]);
+  }, [isPlaying, playMode, soundscape, track.url, emotions]);
 
   // 切换模式
   const switchMode = (mode: PlayMode) => {
@@ -319,7 +319,7 @@ export function MeditationPlayer({
       {playMode === "ambient" && (
         <div className="text-center mb-5">
           <p className="text-[8px] text-neutral-400 tracking-wide">
-            氛围：{soundscapeLabel} · 情绪：{emotions.join(", ")} · 香型：{fragranceFamily}
+            氛围：{soundscapeLabel} · 香型：{fragranceFamily}
           </p>
         </div>
       )}

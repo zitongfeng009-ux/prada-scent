@@ -193,15 +193,92 @@ export const SOUNDSCAPE_LABEL: Record<SoundscapeType, string> = {
   dawn_rise: "晨曦升起",
 };
 
-// ─── 根据情绪+香型决定最终氛围 ─────────────────────────────────
+// ─── 根据香型决定氛围场景（与引导词场景一致）──────────────────
 
 export function resolveSoundscape(
-  emotions: EmotionKeyword[],
+  _emotions: EmotionKeyword[],
   fragranceFamily: FragranceFamily
 ): SoundscapeType {
-  // 以香型为主（引导词场景与音效场景必须一致）
-  const familyScape = FAMILY_SOUNDSCAPE[fragranceFamily];
-  return familyScape;
+  // 场景由香型决定（引导词也基于香型，两者必须一致）
+  return FAMILY_SOUNDSCAPE[fragranceFamily];
+}
+
+// ─── 情绪 → 音效参数微调 ─────────────────────────────────────
+// 场景不变，但情绪会影响音效的“色调”：
+// 焦虑/烦躁 → 更深沉、更慢、更包裹
+// 开心/兴奋 → 更明亮、更快、更活泼
+// 悲伤/疲惫 → 更轻柔、更缓慢
+
+interface EmotionModifier {
+  padDetuneDelta: number;
+  padVolumeFactor: number;
+  noiseVolumeFactor: number;
+  lfoRateFactor: number;
+  lfoDepthFactor: number;
+  chimeVolumeFactor: number;
+  fadeInSeconds: number;
+}
+
+const EMOTION_MODIFIER: Record<EmotionKeyword, EmotionModifier> = {
+  happy:     { padDetuneDelta: -3,  padVolumeFactor: 1.0, noiseVolumeFactor: 0.8, lfoRateFactor: 1.3, lfoDepthFactor: 0.8, chimeVolumeFactor: 1.4, fadeInSeconds: 1.5 },
+  calm:      { padDetuneDelta: 0,   padVolumeFactor: 1.0, noiseVolumeFactor: 1.0, lfoRateFactor: 1.0, lfoDepthFactor: 1.0, chimeVolumeFactor: 1.0, fadeInSeconds: 2.0 },
+  irritated: { padDetuneDelta: 8,   padVolumeFactor: 1.2, noiseVolumeFactor: 1.3, lfoRateFactor: 0.7, lfoDepthFactor: 1.4, chimeVolumeFactor: 0.5, fadeInSeconds: 3.0 },
+  anxious:   { padDetuneDelta: 10,  padVolumeFactor: 1.3, noiseVolumeFactor: 1.4, lfoRateFactor: 0.6, lfoDepthFactor: 1.5, chimeVolumeFactor: 0.4, fadeInSeconds: 3.5 },
+  sad:       { padDetuneDelta: 5,   padVolumeFactor: 1.1, noiseVolumeFactor: 0.9, lfoRateFactor: 0.8, lfoDepthFactor: 1.2, chimeVolumeFactor: 0.7, fadeInSeconds: 3.0 },
+  energetic: { padDetuneDelta: -5,  padVolumeFactor: 1.1, noiseVolumeFactor: 0.7, lfoRateFactor: 1.5, lfoDepthFactor: 0.7, chimeVolumeFactor: 1.5, fadeInSeconds: 1.0 },
+  tired:     { padDetuneDelta: 3,   padVolumeFactor: 0.7, noiseVolumeFactor: 0.6, lfoRateFactor: 0.5, lfoDepthFactor: 0.8, chimeVolumeFactor: 0.3, fadeInSeconds: 4.0 },
+  romantic:  { padDetuneDelta: 6,   padVolumeFactor: 1.0, noiseVolumeFactor: 0.8, lfoRateFactor: 0.9, lfoDepthFactor: 1.1, chimeVolumeFactor: 1.2, fadeInSeconds: 2.5 },
+};
+
+/** 合并多个情绪修饰符（取各维度的平均值） */
+function mergeEmotionModifiers(emotions: EmotionKeyword[]): EmotionModifier {
+  const neutral: EmotionModifier = {
+    padDetuneDelta: 0, padVolumeFactor: 1, noiseVolumeFactor: 1,
+    lfoRateFactor: 1, lfoDepthFactor: 1, chimeVolumeFactor: 1, fadeInSeconds: 2,
+  };
+  if (emotions.length === 0) return neutral;
+  const mods = emotions.map((e) => EMOTION_MODIFIER[e]);
+  return {
+    padDetuneDelta: mods.reduce((s, m) => s + m.padDetuneDelta, 0) / mods.length,
+    padVolumeFactor: mods.reduce((s, m) => s + m.padVolumeFactor, 0) / mods.length,
+    noiseVolumeFactor: mods.reduce((s, m) => s + m.noiseVolumeFactor, 0) / mods.length,
+    lfoRateFactor: mods.reduce((s, m) => s + m.lfoRateFactor, 0) / mods.length,
+    lfoDepthFactor: mods.reduce((s, m) => s + m.lfoDepthFactor, 0) / mods.length,
+    chimeVolumeFactor: mods.reduce((s, m) => s + m.chimeVolumeFactor, 0) / mods.length,
+    fadeInSeconds: mods.reduce((s, m) => s + m.fadeInSeconds, 0) / mods.length,
+  };
+}
+
+/** 将情绪修饰符应用到基础参数上 */
+function applyEmotionModifier(
+  base: SoundscapeParams,
+  mod: EmotionModifier
+): SoundscapeParams {
+  return {
+    ...base,
+    padDetune: base.padDetune + mod.padDetuneDelta,
+    padVolume: Math.min(0.15, base.padVolume * mod.padVolumeFactor),
+    noiseVolume: Math.min(0.15, base.noiseVolume * mod.noiseVolumeFactor),
+    lfoRate: Math.max(0.01, base.lfoRate * mod.lfoRateFactor),
+    lfoDepth: base.lfoDepth * mod.lfoDepthFactor,
+    chimeVolume: Math.min(0.08, base.chimeVolume * mod.chimeVolumeFactor),
+  };
+}
+
+// ─── 氛围场景中文标签（含情绪色调描述）────────────────────────
+
+export function soundscapeDescription(
+  soundscape: SoundscapeType,
+  emotions: EmotionKeyword[]
+): string {
+  const baseLabel = SOUNDSCAPE_LABEL[soundscape];
+  if (emotions.length === 0) return baseLabel;
+  const emotionTones: Record<EmotionKeyword, string> = {
+    happy: "明朗", calm: "平和", irritated: "深沉", anxious: "包裹",
+    sad: "柔缓", energetic: "跃动", tired: "轻眠", romantic: "温柔",
+  };
+  const tones = emotions.map((e) => emotionTones[e]).join("·");
+  return `${baseLabel} · ${tones}`;
 }
 
 // ─── 音频引擎类 ─────────────────────────────────────────────
@@ -213,19 +290,23 @@ export class AmbientAudioEngine {
   private masterGain: GainNode | null = null;
   private isRunning = false;
 
-  /** 启动氛围音效 */
-  start(soundscape: SoundscapeType) {
+  /** 启动氛围音效（可传入情绪来微调音色） */
+  start(soundscape: SoundscapeType, emotions: EmotionKeyword[] = []) {
     if (this.isRunning) this.stop();
 
-    const params = SOUNDSCAPE_PARAMS[soundscape];
+    // 基础参数 + 情绪微调
+    const baseParams = SOUNDSCAPE_PARAMS[soundscape];
+    const emotionMod = mergeEmotionModifiers(emotions);
+    const params = applyEmotionModifier(baseParams, emotionMod);
+
     this.ctx = new AudioContext();
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = 0;
     this.masterGain.connect(this.ctx.destination);
 
-    // 淡入
+    // 淡入（情绪越不安，淡入越慢）
     this.masterGain.gain.linearRampToValueAtTime(
-      1, this.ctx.currentTime + 2
+      1, this.ctx.currentTime + emotionMod.fadeInSeconds
     );
 
     // 1. 铺底音色（双振荡器 + 失谐）
