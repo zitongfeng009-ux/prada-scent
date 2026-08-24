@@ -5,7 +5,33 @@ import { useState, useRef, useEffect } from "react";
 /**
  * 沉浸式冥想播放器
  * Prada 极简风格音频播放器
+ * 音频来源：UCLA Mindful (Creative Commons Attribution-NonCommercial-NoDerivatives 4.0)
  */
+
+const MEDITATION_TRACKS = [
+  {
+    id: "breathing",
+    title: "呼吸引导冥想",
+    subtitle: "Breathing Meditation",
+    url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/01_Breathing_Meditation.mp3",
+    duration: 300, // 5 分钟
+  },
+  {
+    id: "body-scan",
+    title: "身体扫描冥想",
+    subtitle: "Short Body Scan",
+    url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/Body-Scan-Meditation.mp3",
+    duration: 180, // 3 分钟
+  },
+  {
+    id: "body-sound",
+    title: "身音冥想",
+    subtitle: "Body and Sound Meditation",
+    url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/Body-Sound-Meditation.mp3",
+    duration: 180, // 3 分钟
+  },
+];
+
 export function MeditationPlayer({
   guideText,
 }: {
@@ -14,26 +40,58 @@ export function MeditationPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showText, setShowText] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [currentTrack, setCurrentTrack] = useState(0);
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
-  const duration = 180; // 3 分钟冥想
+  const track = MEDITATION_TRACKS[currentTrack];
 
+  // 初始化音频元素
   useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + 100 / (duration * 10);
-        });
-      }, 100);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    const audio = new Audio(track.url);
+    audio.preload = "metadata";
+    audio.addEventListener("canplaythrough", () => setAudioLoaded(true));
+    audio.addEventListener("ended", () => {
+      setIsPlaying(false);
+      setProgress(0);
+    });
+    audioRef.current = audio;
+
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      audio.pause();
+      audio.src = "";
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [track.url]);
+
+  // 播放/暂停同步
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.play().catch(() => setIsPlaying(false));
+      // 用 requestAnimationFrame 同步进度
+      const updateProgress = () => {
+        if (audio.duration && !isNaN(audio.duration)) {
+          setProgress((audio.currentTime / audio.duration) * 100);
+        }
+        animFrameRef.current = requestAnimationFrame(updateProgress);
+      };
+      animFrameRef.current = requestAnimationFrame(updateProgress);
+    } else {
+      audio.pause();
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+    }
+
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
     };
   }, [isPlaying]);
 
@@ -44,10 +102,23 @@ export function MeditationPlayer({
     setIsPlaying(!isPlaying);
   };
 
+  const switchTrack = (index: number) => {
+    setIsPlaying(false);
+    setProgress(0);
+    setCurrentTrack(index);
+    setShowText(false);
+  };
+
   const formatTime = (pct: number) => {
-    const seconds = Math.floor((pct / 100) * duration);
+    const seconds = Math.floor((pct / 100) * track.duration);
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const formatDuration = () => {
+    const m = Math.floor(track.duration / 60);
+    const s = track.duration % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
@@ -69,8 +140,9 @@ export function MeditationPlayer({
           className="text-sm tracking-[0.1em]"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
-          呼吸引导冥想
+          {track.title}
         </h3>
+        <p className="text-[9px] text-neutral-400 mt-1">{track.subtitle}</p>
       </div>
 
       {/* 呼吸波纹动画 */}
@@ -150,9 +222,31 @@ export function MeditationPlayer({
             {formatTime(progress)}
           </span>
           <span className="text-[9px] text-neutral-400 tabular-nums">
-            3:00
+            {formatDuration()}
           </span>
         </div>
+      </div>
+
+      {/* 曲目选择 */}
+      <div className="flex justify-center gap-3 mb-5">
+        {MEDITATION_TRACKS.map((t, i) => (
+          <button
+            key={t.id}
+            onClick={() => switchTrack(i)}
+            className="text-[8px] uppercase tracking-[0.1em] px-2 py-1 transition-all duration-300"
+            style={{
+              background: i === currentTrack ? "#0D0D0D" : "transparent",
+              color: i === currentTrack ? "#F7F6F2" : "#999",
+              border:
+                i === currentTrack
+                  ? "1px solid #0D0D0D"
+                  : "1px solid rgba(13,13,13,0.15)",
+              borderRadius: "0px",
+            }}
+          >
+            {t.title}
+          </button>
+        ))}
       </div>
 
       {/* 冥想引导文案 */}
@@ -171,6 +265,13 @@ export function MeditationPlayer({
           </p>
         </div>
       )}
+
+      {/* 音频来源声明 */}
+      <div className="text-center mt-6 pt-4" style={{ borderTop: "1px solid rgba(13,13,13,0.06)" }}>
+        <p className="text-[7px] text-neutral-300 tracking-wide">
+          音频来源：UCLA Mindful · Diana Winston · CC BY-NC-ND 4.0
+        </p>
+      </div>
     </div>
   );
 }
