@@ -191,7 +191,11 @@ export default function PrescriptionClient({
         <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-400 mb-6 text-center">
           冥想时刻
         </p>
-        <MeditationPlayer guideText={healingNarrative.meditationGuide} />
+        <MeditationPlayer
+          guideText={healingNarrative.meditationGuide}
+          emotions={prescription.request.user.emotions}
+          fragranceFamily={recommendedFragrances[0]?.family || "floral"}
+        />
       </section>
 
       {/* ─── Section 6: 情绪引导 ─── */}

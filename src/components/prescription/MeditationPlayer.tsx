@@ -1,125 +1,163 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import type { EmotionKeyword, FragranceFamily } from "@/lib/types";
+import {
+  AmbientAudioEngine,
+  resolveSoundscape,
+  SOUNDSCAPE_LABEL,
+  type SoundscapeType,
+} from "@/lib/engine/ambientAudio";
 
 /**
  * 沉浸式冥想播放器
- * Prada 极简风格音频播放器
- * 音频来源：UCLA Mindful (Creative Commons Attribution-NonCommercial-NoDerivatives 4.0)
+ * 根据用户情绪 + 推荐香型 自动生成匹配的氛围音效
+ * 同时提供 UCLA 免费引导冥想音频
  */
 
-const MEDITATION_TRACKS = [
+// UCLA 引导冥想音频（Creative Commons CC BY-NC-ND 4.0）
+const GUIDED_TRACKS = [
   {
     id: "breathing",
     title: "呼吸引导冥想",
-    subtitle: "Breathing Meditation",
+    subtitle: "Breathing Meditation · UCLA Mindful",
     url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/01_Breathing_Meditation.mp3",
-    duration: 300, // 5 分钟
+    duration: 300,
   },
   {
     id: "body-scan",
     title: "身体扫描冥想",
-    subtitle: "Short Body Scan",
+    subtitle: "Short Body Scan · UCLA Mindful",
     url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/Body-Scan-Meditation.mp3",
-    duration: 180, // 3 分钟
+    duration: 180,
   },
   {
     id: "body-sound",
     title: "身音冥想",
-    subtitle: "Body and Sound Meditation",
+    subtitle: "Body and Sound · UCLA Mindful",
     url: "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/Body-Sound-Meditation.mp3",
-    duration: 180, // 3 分钟
+    duration: 180,
   },
 ];
 
+type PlayMode = "ambient" | "guided";
+
 export function MeditationPlayer({
   guideText,
+  emotions,
+  fragranceFamily,
 }: {
   guideText: string;
+  emotions: EmotionKeyword[];
+  fragranceFamily: FragranceFamily;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showText, setShowText] = useState(false);
+  const [playMode, setPlayMode] = useState<PlayMode>("ambient");
   const [currentTrack, setCurrentTrack] = useState(0);
-  const [audioLoaded, setAudioLoaded] = useState(false);
+
+  const engineRef = useRef<AmbientAudioEngine | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  const track = MEDITATION_TRACKS[currentTrack];
+  // 根据情绪+香型解析氛围
+  const soundscape: SoundscapeType = resolveSoundscape(emotions, fragranceFamily);
+  const soundscapeLabel = SOUNDSCAPE_LABEL[soundscape];
+  const track = GUIDED_TRACKS[currentTrack];
 
-  // 初始化音频元素
+  // 初始化氛围引擎
   useEffect(() => {
-    const audio = new Audio(track.url);
-    audio.preload = "metadata";
-    audio.addEventListener("canplaythrough", () => setAudioLoaded(true));
-    audio.addEventListener("ended", () => {
-      setIsPlaying(false);
-      setProgress(0);
-    });
-    audioRef.current = audio;
-
+    engineRef.current = new AmbientAudioEngine();
     return () => {
-      audio.pause();
-      audio.src = "";
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      engineRef.current?.stop();
     };
-  }, [track.url]);
+  }, []);
 
-  // 播放/暂停同步
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.play().catch(() => setIsPlaying(false));
-      // 用 requestAnimationFrame 同步进度
-      const updateProgress = () => {
-        if (audio.duration && !isNaN(audio.duration)) {
-          setProgress((audio.currentTime / audio.duration) * 100);
-        }
-        animFrameRef.current = requestAnimationFrame(updateProgress);
-      };
-      animFrameRef.current = requestAnimationFrame(updateProgress);
-    } else {
-      audio.pause();
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-        animFrameRef.current = null;
-      }
-    }
-
-    return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
-    };
-  }, [isPlaying]);
-
-  const togglePlay = () => {
+  // 播放/暂停
+  const togglePlay = useCallback(() => {
     if (!isPlaying) {
       setShowText(true);
+      if (playMode === "ambient") {
+        engineRef.current?.start(soundscape);
+      } else {
+        const audio = new Audio(track.url);
+        audio.play().catch(() => {});
+        audioRef.current = audio;
+        // 同步进度
+        const sync = () => {
+          if (audio.duration && !isNaN(audio.duration)) {
+            setProgress((audio.currentTime / audio.duration) * 100);
+          }
+          animFrameRef.current = requestAnimationFrame(sync);
+        };
+        animFrameRef.current = requestAnimationFrame(sync);
+        audio.addEventListener("ended", () => {
+          setIsPlaying(false);
+          setProgress(0);
+          if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        });
+      }
+    } else {
+      // 暂停
+      if (playMode === "ambient") {
+        engineRef.current?.stop();
+      } else {
+        audioRef.current?.pause();
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      }
     }
     setIsPlaying(!isPlaying);
+  }, [isPlaying, playMode, soundscape, track.url]);
+
+  // 切换模式
+  const switchMode = (mode: PlayMode) => {
+    if (isPlaying) {
+      if (playMode === "ambient") engineRef.current?.stop();
+      else {
+        audioRef.current?.pause();
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      }
+      setIsPlaying(false);
+      setProgress(0);
+    }
+    setPlayMode(mode);
   };
 
+  // 切换引导冥想曲目
   const switchTrack = (index: number) => {
-    setIsPlaying(false);
-    setProgress(0);
+    if (isPlaying && playMode === "guided") {
+      audioRef.current?.pause();
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      setIsPlaying(false);
+      setProgress(0);
+    }
     setCurrentTrack(index);
-    setShowText(false);
   };
+
+  // 清理
+  useEffect(() => {
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      audioRef.current?.pause();
+    };
+  }, []);
 
   const formatTime = (pct: number) => {
-    const seconds = Math.floor((pct / 100) * track.duration);
+    const dur = playMode === "guided" ? track.duration : 300;
+    const seconds = Math.floor((pct / 100) * dur);
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   const formatDuration = () => {
-    const m = Math.floor(track.duration / 60);
-    const s = track.duration % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
+    if (playMode === "guided") {
+      const m = Math.floor(track.duration / 60);
+      const s = track.duration % 60;
+      return `${m}:${s.toString().padStart(2, "0")}`;
+    }
+    return "∞";
   };
 
   return (
@@ -132,7 +170,7 @@ export function MeditationPlayer({
       }}
     >
       {/* 标题 */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-2">
         <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 mb-1">
           沉浸式冥想
         </p>
@@ -140,9 +178,50 @@ export function MeditationPlayer({
           className="text-sm tracking-[0.1em]"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
-          {track.title}
+          {playMode === "ambient" ? soundscapeLabel : track.title}
         </h3>
-        <p className="text-[9px] text-neutral-400 mt-1">{track.subtitle}</p>
+        {playMode === "guided" && (
+          <p className="text-[9px] text-neutral-400 mt-1">{track.subtitle}</p>
+        )}
+        {playMode === "ambient" && (
+          <p className="text-[9px] text-neutral-400 mt-1">
+            基于你的情绪与推荐香型生成
+          </p>
+        )}
+      </div>
+
+      {/* 模式切换 */}
+      <div className="flex justify-center gap-2 mb-5">
+        <button
+          onClick={() => switchMode("ambient")}
+          className="text-[8px] uppercase tracking-[0.12em] px-3 py-1.5 transition-all duration-400"
+          style={{
+            background: playMode === "ambient" ? "#0D0D0D" : "transparent",
+            color: playMode === "ambient" ? "#F7F6F2" : "#999",
+            border:
+              playMode === "ambient"
+                ? "1px solid #0D0D0D"
+                : "1px solid rgba(13,13,13,0.15)",
+            borderRadius: "0px",
+          }}
+        >
+          氛围音效
+        </button>
+        <button
+          onClick={() => switchMode("guided")}
+          className="text-[8px] uppercase tracking-[0.12em] px-3 py-1.5 transition-all duration-400"
+          style={{
+            background: playMode === "guided" ? "#0D0D0D" : "transparent",
+            color: playMode === "guided" ? "#F7F6F2" : "#999",
+            border:
+              playMode === "guided"
+                ? "1px solid #0D0D0D"
+                : "1px solid rgba(13,13,13,0.15)",
+            borderRadius: "0px",
+          }}
+        >
+          引导冥想
+        </button>
       </div>
 
       {/* 呼吸波纹动画 */}
@@ -157,7 +236,6 @@ export function MeditationPlayer({
               : "transparent",
           }}
         >
-          {/* 波纹圈 */}
           {isPlaying && (
             <>
               <span
@@ -176,27 +254,13 @@ export function MeditationPlayer({
               />
             </>
           )}
-
-          {/* 播放/暂停图标 */}
           {isPlaying ? (
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              className="relative z-10"
-            >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="relative z-10">
               <rect x="3" y="2" width="3.5" height="12" fill="#0D0D0D" />
               <rect x="9.5" y="2" width="3.5" height="12" fill="#0D0D0D" />
             </svg>
           ) : (
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              className="relative z-10"
-            >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="relative z-10">
               <path d="M4 2L14 8L4 14V2Z" fill="#0D0D0D" />
             </svg>
           )}
@@ -227,49 +291,57 @@ export function MeditationPlayer({
         </div>
       </div>
 
-      {/* 曲目选择 */}
-      <div className="flex justify-center gap-3 mb-5">
-        {MEDITATION_TRACKS.map((t, i) => (
-          <button
-            key={t.id}
-            onClick={() => switchTrack(i)}
-            className="text-[8px] uppercase tracking-[0.1em] px-2 py-1 transition-all duration-300"
-            style={{
-              background: i === currentTrack ? "#0D0D0D" : "transparent",
-              color: i === currentTrack ? "#F7F6F2" : "#999",
-              border:
-                i === currentTrack
-                  ? "1px solid #0D0D0D"
-                  : "1px solid rgba(13,13,13,0.15)",
-              borderRadius: "0px",
-            }}
-          >
-            {t.title}
-          </button>
-        ))}
-      </div>
+      {/* 引导冥想曲目选择（仅引导模式） */}
+      {playMode === "guided" && (
+        <div className="flex justify-center gap-2 mb-5">
+          {GUIDED_TRACKS.map((t, i) => (
+            <button
+              key={t.id}
+              onClick={() => switchTrack(i)}
+              className="text-[8px] tracking-[0.08em] px-2 py-1 transition-all duration-300"
+              style={{
+                background: i === currentTrack ? "#0D0D0D" : "transparent",
+                color: i === currentTrack ? "#F7F6F2" : "#999",
+                border:
+                  i === currentTrack
+                    ? "1px solid #0D0D0D"
+                    : "1px solid rgba(13,13,13,0.15)",
+                borderRadius: "0px",
+              }}
+            >
+              {t.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 氛围音效信息（仅氛围模式） */}
+      {playMode === "ambient" && (
+        <div className="text-center mb-5">
+          <p className="text-[8px] text-neutral-400 tracking-wide">
+            氛围：{soundscapeLabel} · 情绪：{emotions.join(", ")} · 香型：{fragranceFamily}
+          </p>
+        </div>
+      )}
 
       {/* 冥想引导文案 */}
       {showText && (
-        <div
-          className="text-center transition-opacity duration-1000"
-          style={{ opacity: showText ? 1 : 0 }}
-        >
+        <div className="text-center transition-opacity duration-1000" style={{ opacity: 1 }}>
           <p
             className="text-xs leading-relaxed text-neutral-600 italic"
-            style={{
-              fontFamily: "Georgia, 'Times New Roman', serif",
-            }}
+            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
           >
             &ldquo;{guideText}&rdquo;
           </p>
         </div>
       )}
 
-      {/* 音频来源声明 */}
+      {/* 来源声明 */}
       <div className="text-center mt-6 pt-4" style={{ borderTop: "1px solid rgba(13,13,13,0.06)" }}>
         <p className="text-[7px] text-neutral-300 tracking-wide">
-          音频来源：UCLA Mindful · Diana Winston · CC BY-NC-ND 4.0
+          {playMode === "ambient"
+            ? "氛围音效由 Web Audio API 实时生成"
+            : "引导音频：UCLA Mindful · Diana Winston · CC BY-NC-ND 4.0"}
         </p>
       </div>
     </div>
