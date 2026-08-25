@@ -150,7 +150,112 @@ function generateCommercialCTA(fragrance: FragranceSKU): HealingNarrative["comme
   };
 }
 
-// ─── 三元映射 ─────────────────────────────────────────────────
+// ─── 情绪解析（结合天气、温度、场景，给情绪一段有温度的解读）──────────
+
+function generateEmotionInsight(
+  emotions: EmotionKeyword[],
+  env: EnvironmentInput,
+  scene: SceneMode
+): string[] {
+  const primaryEmotion = emotions[0];
+  const temp = env.temperature;
+  const weather = env.weather;
+
+  // 天气对情绪的影响
+  const weatherContext: Record<string, string> = {
+    sunny: "阳光很好的日子",
+    cloudy: "云层很厚的天气",
+    rainy: "下雨天",
+    snowy: "落雪的日子",
+    foggy: "雾蒙蒙的天气",
+    stormy: "风雨交加的日子",
+  };
+
+  // 场景对情绪的影响
+  const sceneContext: Record<string, string> = {
+    deep_work: "专注做事的时候",
+    sleep_relax: "夜深人静时",
+    commute_subway: "通勤路上",
+    social_boost: "社交场合",
+    outdoor_park: "户外散步时",
+    mercury_reversal: "诸事不顺的这几天",
+  };
+
+  // 情绪在特定环境下的解读
+  const emotionInsights: Record<string, Record<string, string>> = {
+    happy: {
+      sunny: `在${weatherContext[weather]}里，你的开心像被阳光放大了——不是没有烦恼，而是选择让快乐占据上风。`,
+      cloudy: `即使${weatherContext[weather]}，你依然保持开心——这份快乐不是来自外界，而是内心的选择。`,
+      rainy: `${weatherContext[weather]}还能开心，说明你心里有一块地方，雨淋不到。`,
+      snowy: `${weatherContext[weather]}，你的开心像雪地里的一串脚印——清晰、干净、独一无二。`,
+      foggy: `${weatherContext[weather]}，你的开心像雾里的一盏灯——不一定照亮多远，但足够温暖自己。`,
+      stormy: `${weatherContext[weather]}还能开心，这份快乐很珍贵——它不是没心没肺，而是经历过风雨后的从容。`,
+    },
+    calm: {
+      sunny: `${weatherContext[weather]}，你的平静像湖面映着阳光——不是没有风，而是风来了也不起浪。`,
+      cloudy: `${weatherContext[weather]}，你的平静像一杯温水——不烫不凉，刚刚好。`,
+      rainy: `${weatherContext[weather]}，你的平静像雨声里的呼吸——世界越吵，你越安静。`,
+      snowy: `${weatherContext[weather]}，你的平静像雪落无声——不是没有情绪，而是情绪已经沉淀。`,
+      foggy: `${weatherContext[weather]}，你的平静像雾里的远山——看不清，但你知道它在那里。`,
+      stormy: `${weatherContext[weather]}，你的平静像风暴眼——外面越乱，你越稳。`,
+    },
+    irritated: {
+      sunny: `${weatherContext[weather]}，你的烦躁像阳光下的影子——越亮越明显。也许不是天气的问题，是心里有什么事还没放下。`,
+      cloudy: `${weatherContext[weather]}，你的烦躁像闷热的空气——不是爆发，而是慢慢积累。需要找一个出口。`,
+      rainy: `${weatherContext[weather]}，你的烦躁像雨滴敲窗——一下一下，敲得人心烦。但雨总会停。`,
+      snowy: `${weatherContext[weather]}，你的烦躁像雪地里的脚印——每一步都清晰可见。也许需要停下来，看看自己要去哪里。`,
+      foggy: `${weatherContext[weather]}，你的烦躁像雾里的路——看不清方向，所以着急。但着急也没用，雾会散的。`,
+      stormy: `${weatherContext[weather]}，你的烦躁像风雨一样——不是你的错，是天气也在闹情绪。`,
+    },
+    anxious: {
+      sunny: `${weatherContext[weather]}，你的焦虑像阳光下的尘埃——明明很亮，却总觉得有什么在飘。`,
+      cloudy: `${weatherContext[weather]}，你的焦虑像云层——不知道什么时候会下雨，所以一直悬着心。`,
+      rainy: `${weatherContext[weather]}，你的焦虑像雨声——不是吵，而是一直在耳边，挥之不去。`,
+      snowy: `${weatherContext[weather]}，你的焦虑像雪——看起来安静，但积多了会压垮树枝。`,
+      foggy: `${weatherContext[weather]}，你的焦虑像雾——看不清前面的路，所以每一步都小心翼翼。`,
+      stormy: `${weatherContext[weather]}，你的焦虑像风雨——不是你想这样，是环境让你不得不紧张。`,
+    },
+    sad: {
+      sunny: `${weatherContext[weather]}，你的低落像阳光下的阴影——明明很亮，心里却有一块暗的。`,
+      cloudy: `${weatherContext[weather]}，你的低落像天色——不是你的错，是天气也在陪你难过。`,
+      rainy: `${weatherContext[weather]}，你的低落像雨——不是哭，而是心里在下雨。`,
+      snowy: `${weatherContext[weather]}，你的低落像雪——安静、洁白，但有点冷。`,
+      foggy: `${weatherContext[weather]}，你的低落像雾——不是看不见，是不想看见。`,
+      stormy: `${weatherContext[weather]}，你的低落像风雨——不是脆弱，而是允许自己难过。`,
+    },
+    energetic: {
+      sunny: `${weatherContext[weather]}，你的精力像阳光——明亮、充沛、想照亮每一个角落。`,
+      cloudy: `${weatherContext[weather]}，你的精力像云层下的风——看不见，但一直在动。`,
+      rainy: `${weatherContext[weather]}，你的精力像雨滴——一下一下，敲出节奏。`,
+      snowy: `${weatherContext[weather]}，你的精力像雪后的阳光——清冷但明亮。`,
+      foggy: `${weatherContext[weather]}，你的精力像雾里的光——不一定照多远，但一直在。`,
+      stormy: `${weatherContext[weather]}，你的精力像风雨——不是莽撞，而是生命力在燃烧。`,
+    },
+    tired: {
+      sunny: `${weatherContext[weather]}，你的疲惫像阳光下的影子——明明很亮，却觉得累。`,
+      cloudy: `${weatherContext[weather]}，你的疲惫像天色——不是懒，是身体在说需要休息。`,
+      rainy: `${weatherContext[weather]}，你的疲惫像雨声——不是吵，而是想闭上眼睛。`,
+      snowy: `${weatherContext[weather]}，你的疲惫像雪——安静地落下，想被覆盖。`,
+      foggy: `${weatherContext[weather]}，你的疲惫像雾——不是看不见路，是不想走。`,
+      stormy: `${weatherContext[weather]}，你的疲惫像风雨后的安静——不是放弃，是充电。`,
+    },
+    romantic: {
+      sunny: `${weatherContext[weather]}，你的柔软像阳光——温暖、明亮、想被看见。`,
+      cloudy: `${weatherContext[weather]}，你的柔软像云层——不是脆弱，而是愿意被包裹。`,
+      rainy: `${weatherContext[weather]}，你的柔软像雨——不是哭，而是心里有一块地方，想被温柔对待。`,
+      snowy: `${weatherContext[weather]}，你的柔软像雪——洁白、安静、想被珍惜。`,
+      foggy: `${weatherContext[weather]}，你的柔软像雾——不是看不清，是想被慢慢发现。`,
+      stormy: `${weatherContext[weather]}，你的柔软像风雨里的灯——不是弱，而是在黑暗中依然选择温暖。`,
+    },
+  };
+
+  const insight = emotionInsights[primaryEmotion]?.[weather]
+    ?? `${weatherContext[weather]}，你在${sceneContext[scene]}，心里装着${EMOTION_LABEL[primaryEmotion]}。`;
+
+  return [insight];
+}
+
+// ── 三元映射 ─────────────────────────────────────────────────
 
 function generateTriMapping(
   env: EnvironmentInput,
@@ -172,7 +277,8 @@ function generateTriMapping(
     emotion: {
       label: emotions.map((e) => EMOTION_LABEL[e]).join("·"),
       energy: agent1.emotionEnergy,
-      factors: emotions.map((e) => `${EMOTION_LABEL[e]} ${e === "happy" ? "😊" : e === "calm" ? "😌" : e === "irritated" ? "😤" : e === "anxious" ? "😰" : e === "sad" ? "😢" : e === "energetic" ? "⚡" : e === "tired" ? "😴" : "🌹"}`),
+      // 情绪解析：结合天气、温度、场景，给情绪一段有温度的解读
+      factors: generateEmotionInsight(emotions, env, scene),
     },
     fragrance: {
       label: topFragrance.name,

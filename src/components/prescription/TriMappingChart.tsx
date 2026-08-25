@@ -256,20 +256,31 @@ export function TriMappingChart({
                   <p className="text-[9px] text-neutral-400 mb-2">
                     {meta.desc} · {meta.barLabel} {stage.energy}/100
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {stage.factors.map((f, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 text-[9px] text-neutral-600"
-                        style={{
-                          background: `${meta.color}14`,
-                          border: `1px solid ${meta.color}40`,
-                        }}
-                      >
-                        {f}
-                      </span>
-                    ))}
-                  </div>
+                  {/* 情绪卡片：显示为一段有温度的解析文案 */}
+                  {stage.key === "emotion" && stage.factors.length > 0 ? (
+                    <p
+                      className="text-[10px] leading-relaxed text-neutral-700 italic"
+                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                    >
+                      {stage.factors[0]}
+                    </p>
+                  ) : (
+                    // 其他卡片：显示为标签列表
+                    <div className="flex flex-wrap gap-1.5">
+                      {stage.factors.map((f, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-1 text-[9px] text-neutral-600"
+                          style={{
+                            background: `${meta.color}14`,
+                            border: `1px solid ${meta.color}40`,
+                          }}
+                        >
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </button>
