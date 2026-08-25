@@ -58,7 +58,7 @@ export function MeditationPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showText, setShowText] = useState(false);
-  const [playMode, setPlayMode] = useState<PlayMode>("ambient");
+  const [playMode, setPlayMode] = useState<PlayMode>("guided");
   const [voiceSource, setVoiceSource] = useState<"human" | "fallback" | null>(null);
 
   const engineRef = useRef<AmbientAudioEngine | null>(null);
@@ -297,21 +297,6 @@ export function MeditationPlayer({
       {/* 模式切换 */}
       <div className="flex justify-center gap-2 mb-5">
         <button
-          onClick={() => switchMode("ambient")}
-          className="text-[8px] uppercase tracking-[0.12em] px-3 py-1.5 transition-all duration-400"
-          style={{
-            background: playMode === "ambient" ? "#0D0D0D" : "transparent",
-            color: playMode === "ambient" ? "#F7F6F2" : "#999",
-            border:
-              playMode === "ambient"
-                ? "1px solid #0D0D0D"
-                : "1px solid rgba(13,13,13,0.15)",
-            borderRadius: "0px",
-          }}
-        >
-          氛围音效
-        </button>
-        <button
           onClick={() => switchMode("guided")}
           className="text-[8px] uppercase tracking-[0.12em] px-3 py-1.5 transition-all duration-400"
           style={{
@@ -325,6 +310,21 @@ export function MeditationPlayer({
           }}
         >
           语音引导
+        </button>
+        <button
+          onClick={() => switchMode("ambient")}
+          className="text-[8px] uppercase tracking-[0.12em] px-3 py-1.5 transition-all duration-400"
+          style={{
+            background: playMode === "ambient" ? "#0D0D0D" : "transparent",
+            color: playMode === "ambient" ? "#F7F6F2" : "#999",
+            border:
+              playMode === "ambient"
+                ? "1px solid #0D0D0D"
+                : "1px solid rgba(13,13,13,0.15)",
+            borderRadius: "0px",
+          }}
+        >
+          氛围音效
         </button>
       </div>
 
