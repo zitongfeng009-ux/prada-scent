@@ -68,7 +68,7 @@ function generateScentCombination(
         ? "低温环境中，这款香气的木质基调会更加持久地陪伴你，带来被包裹的安全感。"
         : "当前温度是这款香水最佳的挥发区间，三层香调会按节奏依次展开。";
 
-  return `为你选择了 **${topFragrance.name}**——${topFragrance.family === "citrus" ? "柑橘调" : topFragrance.family === "floral" ? "花香调" : topFragrance.family === "woody" ? "木质调" : topFragrance.family === "oriental" ? "东方调" : topFragrance.family === "aromatic" ? "芳香调" : "经典调"}的精致结构。核心香材包含${notesList}。${tempAdvice}`;
+  return `为你选择了 ${topFragrance.name}——${topFragrance.family === "citrus" ? "柑橘调" : topFragrance.family === "floral" ? "花香调" : topFragrance.family === "woody" ? "木质调" : topFragrance.family === "oriental" ? "东方调" : topFragrance.family === "aromatic" ? "芳香调" : "经典调"}的精致结构。核心香材包含${notesList}。${tempAdvice}`;
 }
 
 // ─── 使用方式建议 ─────────────────────────────────────────────

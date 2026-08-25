@@ -89,6 +89,12 @@ export default function PrescriptionClient({
   const { healingNarrative, triMapping, recommendedFragrances, energyDeviation } =
     prescription;
 
+  // CTA 对应的香水（按 commercialCTA.fragranceId 查找，找不到则用第一推荐）
+  const ctaFragrance =
+    recommendedFragrances.find(
+      (f) => f.id === healingNarrative.commercialCTA.fragranceId
+    ) || recommendedFragrances[0];
+
   return (
     <main className="min-h-screen" style={{ background: "#F7F6F2" }}>
       {/* ─── Header ─── */}
@@ -222,7 +228,9 @@ export default function PrescriptionClient({
       {/* ─── Section 7: 商业 CTA ─── */}
       <section className="px-6 py-12 max-w-2xl mx-auto text-center">
         <a
-          href="#"
+          href={ctaFragrance.purchaseUrl}
+          target="_blank"
+          rel="noopener noreferrer"
           className="inline-block px-10 py-4 text-[10px] uppercase tracking-[0.15em] transition-all duration-400"
           style={{
             background: "#0D0D0D",
