@@ -125,10 +125,11 @@ export function TriMappingChart({
   ];
 
   // 三者契合度：能量越接近，香氛越"懂你"
+  // 规则：任何组合的契合度都不低于 50
   const avg =
     (stages[0].energy + stages[1].energy + stages[2].energy) / 3;
   const harmony = Math.max(
-    5,
+    50,
     Math.round(
       100 -
         (Math.abs(stages[0].energy - avg) +
