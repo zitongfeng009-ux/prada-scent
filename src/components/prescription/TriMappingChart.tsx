@@ -13,8 +13,12 @@ import type { TriMapping } from "@/lib/types";
 
 type StageKey = "environment" | "emotion" | "fragrance";
 
-/** 调配链故事（由处方页根据环境/场景/情绪/香型生成） */
+/** 调配链故事（由处方页根据环境/场景/情绪/香型生成，文学体裁随机） */
 export interface BlendStory {
+  /** 体裁标签：童话 / 神话 / 短篇小说 / 散文诗 */
+  genre: string;
+  /** 故事标题 */
+  title: string;
   /** 开场白：天气+场景引入 */
   opening: string;
   /** 环境卡后的旁白：环境如何影响香气需求 */
@@ -153,9 +157,25 @@ export function TriMappingChart({
         }
       `}</style>
 
-      <p className="text-center text-[10px] text-neutral-500 tracking-wide mb-6 leading-relaxed px-4">
-        {story?.opening ?? "环境与情绪交汇，调配出属于你的香气 ↓"}
-      </p>
+      {/* 故事标题（体裁 + 篇名） */}
+      <div className="text-center mb-6 px-4">
+        {story?.genre && (
+          <p className="text-[8px] uppercase tracking-[0.3em] text-neutral-400 mb-2">
+            {story.genre}
+          </p>
+        )}
+        {story?.title && (
+          <p
+            className="text-sm text-neutral-700 mb-3"
+            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+          >
+            《{story.title}》
+          </p>
+        )}
+        <p className="text-[10px] text-neutral-500 tracking-wide leading-relaxed">
+          {story?.opening ?? "环境与情绪交汇，调配出属于你的香气 ↓"}
+        </p>
+      </div>
 
       {stages.map((stage, idx) => {
         const meta = STAGE_META[stage.key];
