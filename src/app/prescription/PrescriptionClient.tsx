@@ -140,7 +140,7 @@ export default function PrescriptionClient({
       {/* ─── Section 2: 三元映射 ─── */}
       <section className="px-6 py-8 max-w-2xl mx-auto">
         <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-400 mb-6 text-center">
-          环境 · 情绪 · 香氛
+          你的香气诞生记 · 点击探索每个阶段
         </p>
         <TriMappingChart mapping={triMapping} />
       </section>
