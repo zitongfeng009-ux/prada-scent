@@ -2,9 +2,66 @@
 
 import { useState } from "react";
 import type { Prescription } from "@/lib/types";
-import { TriMappingChart } from "@/components/prescription/TriMappingChart";
+import { EMOTION_LABEL, SCENE_LABEL } from "@/lib/types";
+import { TriMappingChart, type BlendStory } from "@/components/prescription/TriMappingChart";
 import { FragranceBottleDisplay } from "@/components/prescription/FragranceBottleDisplay";
 import { MeditationPlayer } from "@/components/prescription/MeditationPlayer";
+
+/**
+ * 生成调配链小故事
+ * 环境+场景开场 → 环境旁白 → 情绪旁白 → 香型揭晓，
+ * 完整讲述"从环境、场景、情绪到推荐香型"的推导过程。
+ */
+function generateBlendStory(prescription: Prescription): BlendStory {
+  const { environment, user } = prescription.request;
+  const top = prescription.recommendedFragrances[0];
+
+  // ─ 开场：天气 + 场景 ─
+  const weatherPhrase: Record<string, string> = {
+    sunny: "阳光正好", cloudy: "云层低垂", rainy: "细雨如帘",
+    snowy: "雪花纷飞", foggy: "雾气弥漫", stormy: "风雨交加",
+  };
+  const opening = `${environment.city}，${environment.temperature}℃，${weatherPhrase[environment.weather] ?? "天色如常"}。你在「${SCENE_LABEL[user.scene]}」里，写下了今天香气故事的第一页。`;
+
+  // ─ 环境旁白：温度决定香气需求 ─
+  const environmentLine =
+    environment.temperature >= 30
+      ? "环境先开口了：高温之下，空气渴望一份轻盈与清凉。"
+      : environment.temperature <= 15
+        ? "环境先开口了：微凉之中，空气悄悄寻觅着温暖。"
+        : "环境先开口了：温度刚好，一切都从容不迫。";
+
+  // ─ 情绪旁白：情绪定调 ─
+  const emotionPhrase: Record<string, string> = {
+    happy: "跳跃的开心，想被明亮的香气点亮",
+    calm: "平静的心，想被温柔地延续",
+    irritated: "烦躁的褶皱，需要一双抚平它的手",
+    anxious: "不安的心，正在寻找落脚的地方",
+    sad: "忧伤，想要一个温暖的拥抱",
+    energetic: "满满的活力，想与明亮的香调共舞",
+    tired: "疲惫的身体，想被轻柔地托住",
+    romantic: "温柔的情意，想在花香里多停留一会儿",
+  };
+  const primaryEmotion = user.emotions[0];
+  const emotionLine = primaryEmotion
+    ? `然后，情绪接过了话：此刻的${EMOTION_LABEL[primaryEmotion]}——${emotionPhrase[primaryEmotion] ?? "正在寻找属于自己的香气"}。`
+    : "然后，情绪接过了话：此刻的平静，想找到一款懂它的香气。";
+
+  // ─ 香型揭晓 ─
+  const familyPhrase: Record<string, string> = {
+    citrus: "明亮通透的柑橘调，像清晨第一缕光",
+    floral: "柔软绽放的花香调，像一座正在盛开的花园",
+    woody: "沉稳踏实的木质调，像一片古老的森林",
+    oriental: "温暖绵长的东方调，像一团琥珀色的光",
+    fresh: "洁净清透的清新调，像一场雨后的空气",
+    aromatic: "辽阔舒展的芳香调，像站在海边的风",
+    chypre: "深邃泥土感的甘苔调，像雨后湿润的林地",
+    fougere: "草本清新的馥奇调，像带着露水的草地",
+  };
+  const ending = `环境与情绪在此交汇——答案，是${familyPhrase[top.family] ?? "一款懂你的香气"}。${top.name}，为你而来。`;
+
+  return { opening, environmentLine, emotionLine, ending };
+}
 
 /**
  * 处方页客户端组件
@@ -148,7 +205,7 @@ export default function PrescriptionClient({
         <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-400 mb-6 text-center">
           你的香气诞生记 · 点击探索每个阶段
         </p>
-        <TriMappingChart mapping={triMapping} />
+        <TriMappingChart mapping={triMapping} story={generateBlendStory(prescription)} />
       </section>
 
       {/* ─── Section 3: 推荐香水展示 ─── */}

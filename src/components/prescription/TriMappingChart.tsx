@@ -13,6 +13,18 @@ import type { TriMapping } from "@/lib/types";
 
 type StageKey = "environment" | "emotion" | "fragrance";
 
+/** 调配链故事（由处方页根据环境/场景/情绪/香型生成） */
+export interface BlendStory {
+  /** 开场白：天气+场景引入 */
+  opening: string;
+  /** 环境卡后的旁白：环境如何影响香气需求 */
+  environmentLine: string;
+  /** 情绪卡后的旁白：情绪如何定调 */
+  emotionLine: string;
+  /** 香氛卡后的揭晓语：香型登场 */
+  ending: string;
+}
+
 const STAGE_META: Record<
   StageKey,
   { icon: string; title: string; desc: string; color: string; barLabel: string }
@@ -40,11 +52,11 @@ const STAGE_META: Record<
   },
 };
 
-/** 流光粒子连接线（垂直方向） */
-function FlowConnector({ color }: { color: string }) {
+/** 流光粒子连接线（垂直方向）+ 可选故事旁白 */
+function FlowConnector({ color, caption }: { color: string; caption?: string }) {
   return (
-    <div className="flex justify-center" style={{ height: "36px" }}>
-      <div className="relative w-[1px]" style={{ height: "100%", overflow: "visible" }}>
+    <div className="flex flex-col items-center" style={{ minHeight: caption ? "58px" : "36px" }}>
+      <div className="relative w-[1px]" style={{ height: "36px", overflow: "visible" }}>
         {/* 基础线 */}
         <div
           className="absolute left-0 top-0 w-[1px] h-full"
@@ -66,11 +78,25 @@ function FlowConnector({ color }: { color: string }) {
           />
         ))}
       </div>
+      {caption && (
+        <p
+          className="mt-2 text-[9px] text-neutral-400 text-center px-8 leading-relaxed italic"
+          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+        >
+          {caption}
+        </p>
+      )}
     </div>
   );
 }
 
-export function TriMappingChart({ mapping }: { mapping: TriMapping }) {
+export function TriMappingChart({
+  mapping,
+  story,
+}: {
+  mapping: TriMapping;
+  story?: BlendStory;
+}) {
   const [expanded, setExpanded] = useState<StageKey | null>(null);
 
   const stages: Array<{ key: StageKey; label: string; energy: number; factors: string[] }> = [
@@ -127,8 +153,8 @@ export function TriMappingChart({ mapping }: { mapping: TriMapping }) {
         }
       `}</style>
 
-      <p className="text-center text-[10px] text-neutral-400 tracking-wide mb-6">
-        环境与情绪交汇，调配出属于你的香气 ↓
+      <p className="text-center text-[10px] text-neutral-500 tracking-wide mb-6 leading-relaxed px-4">
+        {story?.opening ?? "环境与情绪交汇，调配出属于你的香气 ↓"}
       </p>
 
       {stages.map((stage, idx) => {
@@ -228,13 +254,28 @@ export function TriMappingChart({ mapping }: { mapping: TriMapping }) {
               )}
             </button>
 
-            {/* 阶段间流光连接（最后一个阶段后不画） */}
+            {/* 阶段间流光连接 + 故事旁白（最后一个阶段后不画） */}
             {idx < stages.length - 1 && (
-              <FlowConnector color={STAGE_META[stages[idx + 1].key].color} />
+              <FlowConnector
+                color={STAGE_META[stages[idx + 1].key].color}
+                caption={
+                  idx === 0 ? story?.environmentLine : story?.emotionLine
+                }
+              />
             )}
           </div>
         );
       })}
+
+      {/* 香型揭晓 */}
+      {story?.ending && (
+        <p
+          className="mt-5 text-center text-[10px] text-neutral-600 leading-relaxed px-6 italic"
+          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+        >
+          {story.ending}
+        </p>
+      )}
 
       {/* 契合度结论 */}
       <div
