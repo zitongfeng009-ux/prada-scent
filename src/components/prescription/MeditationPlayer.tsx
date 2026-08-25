@@ -12,28 +12,38 @@ import {
  * 沉浸式冥想播放器
  *
  * 模式一「氛围音效」：Web Audio API 根据香型+情绪实时生成
- * 模式二「语音引导」：浏览器中文语音（SpeechSynthesis）朗读
- *   基于推荐香型生成的引导词，句间留白，同时低音量播放氛围背景
+ * 模式二「语音引导」：播放预生成的微软神经网络人声（晓晓）引导音频，
+ *   结构 = 情绪开头 + 停顿 + 香型场景，背景同步低音量氛围音效。
+ *   音频由 scripts/generate_meditation_audio.py 预生成，
+ *   加载失败时回退到浏览器语音合成（SpeechSynthesis）。
  */
 
 type PlayMode = "ambient" | "guided";
 
-/** 语音引导：语速（低于正常，营造冥想节奏） */
-const SPEECH_RATE = 0.72;
-/** 语音引导：句间停顿毫秒 */
-const SENTENCE_PAUSE_MS = 2600;
+/** 语音引导：情绪开头与香型场景之间的停顿（秒） */
+const SEGMENT_PAUSE_S = 1.2;
 /** 语音引导：背景氛围音量（低音量铺底） */
 const GUIDED_BG_VOLUME = 0.35;
+/** 语音引导回退方案：语速 */
+const FALLBACK_RATE = 0.72;
+/** 语音引导回退方案：句间停顿毫秒 */
+const FALLBACK_PAUSE_MS = 2600;
 
-/** 将中文文本按句切分 */
+/** 预生成音频路径 */
+const emotionAudioUrl = (e: EmotionKeyword) => `/meditation/emotion_${e}.mp3`;
+const familyAudioUrl = (f: FragranceFamily) => `/meditation/family_${f}.mp3`;
+
+/** 将中文文本按句切分（回退方案用） */
 function splitSentences(text: string): string[] {
   return text.match(/[^。！？]+[。！？]?/g)?.map((s) => s.trim()) ?? [text];
 }
 
-/** 估算语音引导总时长（秒）：语速约 2.5 字/秒 + 句间停顿 */
-function estimateGuidedDuration(text: string): number {
-  const sentences = splitSentences(text);
-  return Math.round(text.length / 2.5 + sentences.length * (SENTENCE_PAUSE_MS / 1000));
+/** 用 Audio 元素播放一段音频，返回时长（秒）；加载失败返回 null */
+function playSegment(url: string, onEnded: () => void): HTMLAudioElement {
+  const audio = new Audio(url);
+  audio.addEventListener("ended", onEnded);
+  audio.play().catch(() => onEnded());
+  return audio;
 }
 
 export function MeditationPlayer({
@@ -49,45 +59,34 @@ export function MeditationPlayer({
   const [progress, setProgress] = useState(0);
   const [showText, setShowText] = useState(false);
   const [playMode, setPlayMode] = useState<PlayMode>("ambient");
-  const [hasChineseVoice, setHasChineseVoice] = useState(true);
+  const [voiceSource, setVoiceSource] = useState<"human" | "fallback" | null>(null);
 
   const engineRef = useRef<AmbientAudioEngine | null>(null);
   const stopRequestedRef = useRef(false);
+  const audio1Ref = useRef<HTMLAudioElement | null>(null);
+  const audio2Ref = useRef<HTMLAudioElement | null>(null);
 
   // 根据香型解析氛围场景（与引导词一致），情绪微调音色
   const soundscape = resolveSoundscape(emotions, fragranceFamily);
   const soundscapeLabel = soundscapeDescription(soundscape, emotions);
-  const guidedDuration = estimateGuidedDuration(guideText);
+  const primaryEmotion = emotions[0];
 
-  // 初始化氛围引擎 + 检测中文语音
+  // 初始化氛围引擎
   useEffect(() => {
     engineRef.current = new AmbientAudioEngine();
-
-    // SpeechSynthesis 语音列表可能异步加载
-    const checkVoices = () => {
-      if (typeof window === "undefined" || !window.speechSynthesis) {
-        setHasChineseVoice(false);
-        return;
-      }
-      const voices = window.speechSynthesis.getVoices();
-      setHasChineseVoice(voices.length === 0 || voices.some((v) => v.lang.startsWith("zh")));
-    };
-    checkVoices();
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.addEventListener("voiceschanged", checkVoices);
-    }
-
     return () => {
       stopRequestedRef.current = true;
       engineRef.current?.stop();
+      audio1Ref.current?.pause();
+      audio2Ref.current?.pause();
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
-        window.speechSynthesis.removeEventListener("voiceschanged", checkVoices);
       }
     };
   }, []);
 
-  /** 选择中文语音（优先 zh-CN） */
+  // ─── 回退方案：浏览器语音合成 ────────────────────────────────
+
   const pickChineseVoice = (): SpeechSynthesisVoice | null => {
     if (typeof window === "undefined" || !window.speechSynthesis) return null;
     const voices = window.speechSynthesis.getVoices();
@@ -98,7 +97,6 @@ export function MeditationPlayer({
     );
   };
 
-  /** 朗读一句话（Promise 在朗读结束时 resolve） */
   const speakSentence = (text: string) =>
     new Promise<void>((resolve) => {
       if (typeof window === "undefined" || !window.speechSynthesis) {
@@ -107,7 +105,7 @@ export function MeditationPlayer({
       }
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "zh-CN";
-      utterance.rate = SPEECH_RATE;
+      utterance.rate = FALLBACK_RATE;
       utterance.pitch = 0.9;
       const voice = pickChineseVoice();
       if (voice) utterance.voice = voice;
@@ -122,44 +120,115 @@ export function MeditationPlayer({
   /** 停止所有播放 */
   const stopAll = useCallback(() => {
     stopRequestedRef.current = true;
+    audio1Ref.current?.pause();
+    audio2Ref.current?.pause();
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     engineRef.current?.stop();
   }, []);
 
-  /** 语音引导模式：逐句朗读 + 句间留白 + 低音量氛围背景 */
+  // ─── 语音引导：优先预生成人声，失败回退语音合成 ──────────────
+
   const startGuided = useCallback(async () => {
     stopRequestedRef.current = false;
-    // 低音量氛围背景（与引导词同场景）
-    engineRef.current?.start(soundscape, emotions, GUIDED_BG_VOLUME);
 
-    const sentences = splitSentences(guideText);
-    for (let i = 0; i < sentences.length; i++) {
-      if (stopRequestedRef.current) return;
-      setProgress(Math.round((i / sentences.length) * 100));
-      await speakSentence(sentences[i]);
-      if (stopRequestedRef.current) return;
-      // 最后一句后不再停顿
-      if (i < sentences.length - 1) {
-        await waitMs(SENTENCE_PAUSE_MS);
+    // 先尝试预生成人声
+    const tryHumanVoice = async (): Promise<boolean> => {
+      const emotionUrl = primaryEmotion ? emotionAudioUrl(primaryEmotion) : null;
+      const familyUrl = familyAudioUrl(fragranceFamily);
+
+      // 预加载校验（本地文件，瞬间完成）
+      const canLoad = (url: string) =>
+        new Promise<boolean>((resolve) => {
+          const probe = new Audio();
+          probe.addEventListener("canplaythrough", () => resolve(true), { once: true });
+          probe.addEventListener("error", () => resolve(false), { once: true });
+          probe.src = url;
+        });
+
+      const familyOk = await canLoad(familyUrl);
+      if (!familyOk) return false;
+
+      setVoiceSource("human");
+      engineRef.current?.start(soundscape, emotions, GUIDED_BG_VOLUME);
+
+      // 阶段 1：情绪开头（如有）
+      if (emotionUrl && (await canLoad(emotionUrl))) {
+        if (stopRequestedRef.current) return true;
+        await new Promise<void>((resolve) => {
+          const audio = playSegment(emotionUrl, resolve);
+          audio1Ref.current = audio;
+          // 进度：前 15% 为开头部分
+          const tick = () => {
+            if (stopRequestedRef.current) return;
+            if (audio.duration && !isNaN(audio.duration)) {
+              const ratio = audio.currentTime / audio.duration;
+              setProgress(Math.min(15, ratio * 15));
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        });
       }
-    }
+      if (stopRequestedRef.current) return true;
+
+      // 阶段间停顿
+      await waitMs(SEGMENT_PAUSE_S * 1000);
+      if (stopRequestedRef.current) return true;
+
+      // 阶段 2：香型场景（后 85%）
+      await new Promise<void>((resolve) => {
+        const audio = playSegment(familyUrl, resolve);
+        audio2Ref.current = audio;
+        const tick = () => {
+          if (stopRequestedRef.current) return;
+          if (audio.duration && !isNaN(audio.duration)) {
+            const ratio = audio.currentTime / audio.duration;
+            setProgress(15 + ratio * 85);
+          }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+      return true;
+    };
+
+    const played = await tryHumanVoice();
     if (stopRequestedRef.current) return;
 
-    // 朗读结束：淡出背景，回到初始状态
+    if (!played) {
+      // 回退：浏览器语音合成逐句朗读
+      setVoiceSource("fallback");
+      engineRef.current?.start(soundscape, emotions, GUIDED_BG_VOLUME);
+      const sentences = splitSentences(guideText);
+      for (let i = 0; i < sentences.length; i++) {
+        if (stopRequestedRef.current) return;
+        setProgress(Math.round((i / sentences.length) * 100));
+        await speakSentence(sentences[i]);
+        if (stopRequestedRef.current) return;
+        if (i < sentences.length - 1) {
+          await waitMs(FALLBACK_PAUSE_MS);
+        }
+      }
+    }
+
+    if (stopRequestedRef.current) return;
+
+    // 结束：淡出背景，复位
     setProgress(100);
     engineRef.current?.stop();
     await waitMs(1200);
     if (stopRequestedRef.current) return;
     setIsPlaying(false);
     setProgress(0);
-  }, [soundscape, emotions, guideText]);
+  }, [soundscape, emotions, guideText, fragranceFamily, primaryEmotion]);
 
   // 播放/暂停
   const togglePlay = useCallback(() => {
     if (!isPlaying) {
       setShowText(true);
+      setVoiceSource(null);
       if (playMode === "ambient") {
         engineRef.current?.start(soundscape, emotions);
         setIsPlaying(true);
@@ -184,7 +253,10 @@ export function MeditationPlayer({
     setPlayMode(mode);
   };
 
-  const formatTime = (seconds: number) => {
+  const formatTime = (pct: number) => {
+    // 人声音频：情绪开头约 5 秒 + 停顿 + 场景约 40 秒
+    const dur = playMode === "guided" ? 48 : 300;
+    const seconds = (pct / 100) * dur;
     const m = Math.floor(seconds / 60);
     const s = Math.round(seconds) % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
@@ -315,10 +387,10 @@ export function MeditationPlayer({
         </div>
         <div className="flex justify-between mt-2">
           <span className="text-[9px] text-neutral-400 tabular-nums">
-            {formatTime((progress / 100) * (playMode === "guided" ? guidedDuration : 300))}
+            {formatTime(progress)}
           </span>
           <span className="text-[9px] text-neutral-400 tabular-nums">
-            {playMode === "guided" ? formatTime(guidedDuration) : "∞"}
+            {playMode === "guided" ? "0:48" : "∞"}
           </span>
         </div>
       </div>
@@ -327,9 +399,9 @@ export function MeditationPlayer({
       {playMode === "guided" && (
         <div className="text-center mb-5">
           <p className="text-[8px] text-neutral-400 tracking-wide">
-            {hasChineseVoice
-              ? "引导词基于推荐香型生成 · 逐句朗读 · 句间留白"
-              : "当前浏览器缺少中文语音，将仅播放背景氛围"}
+            {isPlaying && voiceSource === "fallback"
+              ? "浏览器语音合成模式（预生成音频加载失败）"
+              : "人声引导 · 微软晓晓神经网络语音 · 背景氛围同步"}
           </p>
         </div>
       )}
@@ -360,7 +432,7 @@ export function MeditationPlayer({
         <p className="text-[7px] text-neutral-300 tracking-wide">
           {playMode === "ambient"
             ? "氛围音效由 Web Audio API 实时生成"
-            : "中文语音由浏览器语音合成生成 · 背景音效 Web Audio API 实时生成"}
+            : "人声：Microsoft 晓晓神经网络语音（预生成）· 背景音效 Web Audio API 实时生成"}
         </p>
       </div>
     </div>
