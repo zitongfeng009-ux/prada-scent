@@ -22,12 +22,135 @@ const mockEnvironment: EnvironmentInput = {
 };
 
 export default function Home() {
+  const [environment, setEnvironment] =
+    useState<EnvironmentInput>(mockEnvironment);
+
   const [selectedEmotions, setSelectedEmotions] = useState<
     EmotionKeyword[]
   >([]);
 
   const [selectedScene, setSelectedScene] =
     useState<SceneMode | null>(null);
+
+  // 自由倾诉
+  const [freeText, setFreeText] = useState("");
+
+  // 定位状态
+  const [locationStatus, setLocationStatus] = useState("");
+
+  // 天气加载状态
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
+  // =========================
+  // 获取当前位置 + 城市 + 天气
+  // =========================
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus("你的浏览器不支持定位功能");
+      return;
+    }
+
+    setLocationStatus("正在获取你的位置……");
+    setWeatherLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          // =========================
+          // 1. 获取真实天气
+          // =========================
+
+          const weatherResponse = await fetch(
+            `/api/weather?lat=${latitude}&lng=${longitude}`
+          );
+
+          if (!weatherResponse.ok) {
+            throw new Error("天气 API 请求失败");
+          }
+
+          const weatherData = await weatherResponse.json();
+
+          // =========================
+          // 2. 获取城市名称
+          // =========================
+
+          const cityResponse = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client` +
+              `?latitude=${latitude}` +
+              `&longitude=${longitude}` +
+              `&localityLanguage=zh`
+          );
+
+          let city = "未知城市";
+
+          if (cityResponse.ok) {
+            const cityData = await cityResponse.json();
+
+            city =
+              cityData.city ||
+              cityData.locality ||
+              "未知城市";
+          }
+
+          // =========================
+          // 3. 更新环境数据
+          // =========================
+
+          setEnvironment((prev) => ({
+            ...prev,
+            city,
+            lat: latitude,
+            lng: longitude,
+            temperature: weatherData.temperature,
+            humidity: weatherData.humidity,
+            weather: weatherData.weather,
+          }));
+
+          setLocationStatus(
+            `位置和天气获取成功 ✓ ${city}`
+          );
+        } catch (error) {
+          console.error(error);
+
+          // 即使天气或城市获取失败，
+          // 定位仍然成功
+          setEnvironment((prev) => ({
+            ...prev,
+            lat: latitude,
+            lng: longitude,
+          }));
+
+          setLocationStatus(
+            "位置获取成功，但天气或城市暂时获取失败"
+          );
+        } finally {
+          setWeatherLoading(false);
+        }
+      },
+      (error) => {
+        console.error(error);
+
+        setWeatherLoading(false);
+
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationStatus("你拒绝了定位权限");
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          setLocationStatus("暂时无法获取位置信息");
+        } else if (error.code === error.TIMEOUT) {
+          setLocationStatus("获取位置超时，请再试一次");
+        } else {
+          setLocationStatus("获取位置失败，请再试一次");
+        }
+      }
+    );
+  };
+
+  // =========================
+  // 生成香氛处方
+  // =========================
 
   const handleGeneratePrescription = () => {
     // 情绪至少选择一个
@@ -44,15 +167,20 @@ export default function Home() {
 
     // 使用 URLSearchParams 自动进行 URL 编码
     const params = new URLSearchParams({
-      city: mockEnvironment.city,
-      temp: String(mockEnvironment.temperature),
-      humidity: String(mockEnvironment.humidity),
-      weather: mockEnvironment.weather,
-      lat: String(mockEnvironment.lat),
-      lng: String(mockEnvironment.lng),
+      city: environment.city,
+      temp: String(environment.temperature),
+      humidity: String(environment.humidity),
+      weather: environment.weather,
+      lat: String(environment.lat),
+      lng: String(environment.lng),
       emotions: selectedEmotions.join(","),
       scene: selectedScene,
     });
+
+    // 如果用户填写了自由倾诉，才加入 freeText
+    if (freeText.trim()) {
+      params.set("freeText", freeText.trim());
+    }
 
     // 跳转到 B 负责的处方页面
     window.location.href = `/prescription?${params.toString()}`;
@@ -61,6 +189,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-purple-50 px-6 py-12">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-10">
+
         {/* 页面标题 */}
         <div className="text-center">
           <p className="text-sm tracking-[0.3em] text-purple-500">
@@ -77,7 +206,27 @@ export default function Home() {
         </div>
 
         {/* 天气 */}
-        <WeatherCard environment={mockEnvironment} />
+        <WeatherCard environment={environment} />
+
+        {/* 获取位置 */}
+        <section className="w-full max-w-md text-center">
+          <button
+            type="button"
+            onClick={handleGetLocation}
+            disabled={weatherLoading}
+            className="rounded-full border border-purple-200 bg-white px-6 py-3 text-sm font-medium text-purple-700 shadow-sm transition-all hover:border-purple-300 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {weatherLoading
+              ? "正在感知环境……"
+              : "📍 使用我的位置"}
+          </button>
+
+          {locationStatus && (
+            <p className="mt-3 text-sm text-zinc-500">
+              {locationStatus}
+            </p>
+          )}
+        </section>
 
         {/* 情绪 */}
         <EmotionSelector
@@ -90,6 +239,32 @@ export default function Home() {
           selectedScene={selectedScene}
           onChange={setSelectedScene}
         />
+
+        {/* 自由倾诉 */}
+        <section className="w-full max-w-md">
+          <div className="mb-3">
+            <h2 className="text-lg font-medium text-zinc-900">
+              自由倾诉
+            </h2>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              还有什么想告诉香氛的？
+            </p>
+          </div>
+
+          <textarea
+            value={freeText}
+            onChange={(e) => setFreeText(e.target.value)}
+            placeholder="例如：最近工作压力有点大，晚上总是睡不好……"
+            rows={4}
+            maxLength={200}
+            className="w-full resize-none rounded-2xl border border-purple-100 bg-white px-5 py-4 text-sm text-zinc-800 shadow-sm outline-none transition focus:border-purple-300 focus:ring-2 focus:ring-purple-100"
+          />
+
+          <p className="mt-2 text-right text-xs text-zinc-400">
+            {freeText.length}/200
+          </p>
+        </section>
 
         {/* 生成按钮 */}
         <button
