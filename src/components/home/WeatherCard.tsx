@@ -26,12 +26,26 @@ export default function WeatherCard({
   };
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-white/60 bg-white/70 p-6 shadow-sm backdrop-blur-md">
+    <div
+      className="w-full max-w-md border border-[rgba(13,13,13,0.08)] p-6 backdrop-blur-md"
+      style={{
+        background: "rgba(255,255,255,0.5)",
+        borderRadius: 2,
+      }}
+    >
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <p className="text-sm text-zinc-500">当前位置</p>
-          <h2 className="mt-1 text-2xl font-semibold text-zinc-900">
-            📍 {environment.city}
+          <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-400">
+            当前位置
+          </p>
+          <h2
+            className="mt-1 text-2xl"
+            style={{
+              color: "#0D0D0D",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+            }}
+          >
+            {environment.city}
           </h2>
         </div>
 
@@ -42,18 +56,24 @@ export default function WeatherCard({
 
       <div className="flex items-end gap-4">
         <div>
-          <span className="text-5xl font-light tracking-tight text-zinc-900">
+          <span
+            className="text-5xl font-light tracking-tight"
+            style={{
+              color: "#0D0D0D",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+            }}
+          >
             {environment.temperature}°
           </span>
-          <span className="ml-1 text-zinc-500">C</span>
+          <span className="ml-1 text-neutral-500">C</span>
         </div>
 
-        <div className="pb-1 text-sm text-zinc-500">
+        <div className="pb-1 text-sm text-neutral-500">
           湿度 {environment.humidity}%
         </div>
       </div>
 
-      <p className="mt-4 text-sm text-zinc-600">
+      <p className="mt-4 text-sm text-neutral-600">
         {weatherLabel[environment.weather]}
       </p>
     </div>

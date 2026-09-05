@@ -34,15 +34,21 @@ export default function SceneSelector({
   return (
     <section className="w-full max-w-2xl">
       <div className="mb-4">
-        <p className="text-sm tracking-wide text-purple-500">
-          YOUR SCENE
+        <p className="text-[10px] uppercase tracking-[0.3em] text-neutral-400">
+          你的场景
         </p>
 
-        <h2 className="mt-1 text-2xl font-semibold text-zinc-900">
+        <h2
+          className="mt-2 text-2xl"
+          style={{
+            color: "#0D0D0D",
+            fontFamily: "Georgia, 'Times New Roman', serif",
+          }}
+        >
           你现在身处什么场景？
         </h2>
 
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-neutral-500">
           选择一个最符合你此刻状态的场景
         </p>
       </div>
@@ -56,17 +62,26 @@ export default function SceneSelector({
               key={scene}
               type="button"
               onClick={() => handleSceneClick(scene)}
-              className={`rounded-2xl border p-4 text-left transition-all ${
+              className={`border p-4 text-left transition-colors duration-[400ms] ${
                 selected
-                  ? "border-purple-500 bg-purple-100 shadow-sm"
-                  : "border-zinc-200 bg-white hover:border-purple-300 hover:bg-purple-50"
+                  ? "border-[#0D0D0D] bg-[#0D0D0D]"
+                  : "border-[rgba(13,13,13,0.12)] bg-transparent hover:border-[#0D0D0D]"
               }`}
+              style={{ borderRadius: 2 }}
             >
-              <div className="font-medium text-zinc-900">
+              <div
+                className={`font-medium ${
+                  selected ? "text-[#F7F6F2]" : "text-[#0D0D0D]"
+                }`}
+              >
                 {SCENE_LABEL[scene]}
               </div>
 
-              <div className="mt-1 text-xs text-zinc-400">
+              <div
+                className={`mt-1 text-[10px] tracking-wider ${
+                  selected ? "text-[#F7F6F2]/60" : "text-neutral-400"
+                }`}
+              >
                 {selected ? "已选择" : "点击选择"}
               </div>
             </button>
@@ -75,7 +90,7 @@ export default function SceneSelector({
       </div>
 
       {!selectedScene && (
-        <p className="mt-3 text-sm text-zinc-400">
+        <p className="mt-3 text-xs tracking-wider text-neutral-400">
           请选择一个场景
         </p>
       )}

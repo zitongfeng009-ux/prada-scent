@@ -187,20 +187,29 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-purple-50 px-6 py-12">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-10">
+    <main
+      className="min-h-screen px-6 py-16"
+      style={{ background: "#F7F6F2" }}
+    >
+      <div className="mx-auto flex max-w-2xl flex-col items-center gap-12">
 
         {/* 页面标题 */}
         <div className="text-center">
-          <p className="text-sm tracking-[0.3em] text-purple-500">
-            PRADA SCENT
+          <p className="text-[10px] uppercase tracking-[0.35em] text-neutral-400">
+            Prada Scent
           </p>
 
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-zinc-900">
+          <h1
+            className="mt-4 text-4xl tracking-tight"
+            style={{
+              color: "#0D0D0D",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+            }}
+          >
             今日香氛 · 随境而生
           </h1>
 
-          <p className="mt-3 text-zinc-500">
+          <p className="mt-4 text-sm text-neutral-500">
             感知此刻的环境，找到属于你的香气
           </p>
         </div>
@@ -214,15 +223,16 @@ export default function Home() {
             type="button"
             onClick={handleGetLocation}
             disabled={weatherLoading}
-            className="rounded-full border border-purple-200 bg-white px-6 py-3 text-sm font-medium text-purple-700 shadow-sm transition-all hover:border-purple-300 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="border border-[#0D0D0D] bg-transparent px-8 py-3 text-[11px] tracking-[0.2em] text-[#0D0D0D] transition-colors duration-[400ms] hover:bg-[#0D0D0D] hover:text-[#F7F6F2] disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ borderRadius: 0 }}
           >
             {weatherLoading
               ? "正在感知环境……"
-              : "📍 使用我的位置"}
+              : "使用我的位置"}
           </button>
 
           {locationStatus && (
-            <p className="mt-3 text-sm text-zinc-500">
+            <p className="mt-3 text-xs tracking-wider text-neutral-500">
               {locationStatus}
             </p>
           )}
@@ -243,11 +253,17 @@ export default function Home() {
         {/* 自由倾诉 */}
         <section className="w-full max-w-md">
           <div className="mb-3">
-            <h2 className="text-lg font-medium text-zinc-900">
+            <h2
+              className="text-xl"
+              style={{
+                color: "#0D0D0D",
+                fontFamily: "Georgia, 'Times New Roman', serif",
+              }}
+            >
               自由倾诉
             </h2>
 
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-neutral-500">
               还有什么想告诉香氛的？
             </p>
           </div>
@@ -258,10 +274,11 @@ export default function Home() {
             placeholder="例如：最近工作压力有点大，晚上总是睡不好……"
             rows={4}
             maxLength={200}
-            className="w-full resize-none rounded-2xl border border-purple-100 bg-white px-5 py-4 text-sm text-zinc-800 shadow-sm outline-none transition focus:border-purple-300 focus:ring-2 focus:ring-purple-100"
+            className="w-full resize-none border border-[rgba(13,13,13,0.15)] bg-transparent px-5 py-4 text-sm text-[#0D0D0D] outline-none transition-colors duration-[400ms] placeholder:text-neutral-400 focus:border-[#0D0D0D]"
+            style={{ borderRadius: 2 }}
           />
 
-          <p className="mt-2 text-right text-xs text-zinc-400">
+          <p className="mt-2 text-right text-[10px] tracking-wider text-neutral-400">
             {freeText.length}/200
           </p>
         </section>
@@ -270,7 +287,8 @@ export default function Home() {
         <button
           type="button"
           onClick={handleGeneratePrescription}
-          className="w-full max-w-md rounded-full bg-purple-600 px-8 py-4 text-base font-medium text-white shadow-lg transition-all hover:bg-purple-700 hover:shadow-xl active:scale-[0.98]"
+          className="w-full max-w-md border border-[#0D0D0D] bg-[#0D0D0D] px-8 py-4 text-xs tracking-[0.3em] text-[#F7F6F2] transition-colors duration-[400ms] hover:bg-[#F7F6F2] hover:text-[#0D0D0D]"
+          style={{ borderRadius: 0 }}
         >
           获取今日香笺
         </button>

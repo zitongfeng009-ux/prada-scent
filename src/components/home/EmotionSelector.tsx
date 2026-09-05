@@ -39,15 +39,21 @@ export default function EmotionSelector({
   return (
     <section className="w-full max-w-2xl">
       <div className="mb-4">
-        <p className="text-sm tracking-wide text-purple-500">
-          YOUR EMOTION
+        <p className="text-[10px] uppercase tracking-[0.3em] text-neutral-400">
+          你的情绪
         </p>
 
-        <h2 className="mt-1 text-2xl font-semibold text-zinc-900">
+        <h2
+          className="mt-2 text-2xl"
+          style={{
+            color: "#0D0D0D",
+            fontFamily: "Georgia, 'Times New Roman', serif",
+          }}
+        >
           此刻的你是什么心情？
         </h2>
 
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-neutral-500">
           可以选择多个最贴近你此刻状态的情绪
         </p>
       </div>
@@ -61,21 +67,30 @@ export default function EmotionSelector({
               key={emotion}
               type="button"
               onClick={() => toggleEmotion(emotion)}
-              className={`rounded-2xl border p-4 text-left transition-all ${
+              className={`border p-4 text-left transition-colors duration-[400ms] ${
                 selected
-                  ? "border-purple-500 bg-purple-100 shadow-sm"
-                  : "border-zinc-200 bg-white hover:border-purple-300 hover:bg-purple-50"
+                  ? "border-[#0D0D0D] bg-[#0D0D0D]"
+                  : "border-[rgba(13,13,13,0.12)] bg-transparent hover:border-[#0D0D0D]"
               }`}
+              style={{ borderRadius: 2 }}
             >
               <div className="text-2xl">
                 {EMOTION_EMOJI[emotion]}
               </div>
 
-              <div className="mt-2 font-medium text-zinc-900">
+              <div
+                className={`mt-2 font-medium ${
+                  selected ? "text-[#F7F6F2]" : "text-[#0D0D0D]"
+                }`}
+              >
                 {EMOTION_LABEL[emotion]}
               </div>
 
-              <div className="mt-1 text-xs text-zinc-400">
+              <div
+                className={`mt-1 text-[10px] tracking-wider ${
+                  selected ? "text-[#F7F6F2]/60" : "text-neutral-400"
+                }`}
+              >
                 {selected ? "已选择" : "点击选择"}
               </div>
             </button>
@@ -84,7 +99,7 @@ export default function EmotionSelector({
       </div>
 
       {selectedEmotions.length === 0 && (
-        <p className="mt-3 text-sm text-zinc-400">
+        <p className="mt-3 text-xs tracking-wider text-neutral-400">
           至少选择一种情绪
         </p>
       )}
