@@ -486,12 +486,13 @@ export default function PrescriptionClient({
         </div>
       </section>
 
-      {/* ─── Section 7: 商业 CTA ─── */}
+      {/* ─── Section 7: 日记入口 ─── */}
       <section className="px-6 py-12 max-w-2xl mx-auto text-center">
+        <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-400 mb-4">
+          保存今日香气记忆
+        </p>
         <a
-          href={ctaFragrance.purchaseUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/diary"
           className="inline-block px-10 py-4 text-[10px] uppercase tracking-[0.15em] transition-all duration-400"
           style={{
             background: "#0D0D0D",
@@ -508,38 +509,7 @@ export default function PrescriptionClient({
             e.currentTarget.style.outline = "none";
           }}
         >
-          {healingNarrative.commercialCTA.label}
-        </a>
-        <p className="mt-3 text-[8px] text-neutral-400 tracking-wider">
-          试香装购买 · 定制礼盒 · 订阅服务
-        </p>
-      </section>
-
-      {/* ─── Section 8: 日记入口 ─── */}
-      <section className="px-6 py-8 max-w-2xl mx-auto text-center border-t border-[rgba(13,13,13,0.06)]">
-        <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-400 mb-4">
-          保存今日香气记忆
-        </p>
-        <a
-          href="/diary"
-          className="inline-block px-8 py-3 text-[10px] uppercase tracking-[0.15em] transition-all duration-400"
-          style={{
-            border: "1px solid rgba(13,13,13,0.2)",
-            color: "rgba(13,13,13,0.6)",
-            background: "transparent",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#0D0D0D";
-            e.currentTarget.style.color = "#F7F6F2";
-            e.currentTarget.style.borderColor = "#0D0D0D";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = "rgba(13,13,13,0.6)";
-            e.currentTarget.style.borderColor = "rgba(13,13,13,0.2)";
-          }}
-        >
-          查看情绪日记
+          查看今日情绪日记
         </a>
       </section>
     </main>
