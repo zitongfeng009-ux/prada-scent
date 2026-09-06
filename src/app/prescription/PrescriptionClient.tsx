@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Prescription } from "@/lib/types";
 import { EMOTION_LABEL, SCENE_LABEL } from "@/lib/types";
 import { TriMappingChart, type BlendStory } from "@/components/prescription/TriMappingChart";
@@ -262,6 +262,23 @@ export default function PrescriptionClient({
   const [prescription, setPrescription] =
     useState<Prescription | null>(initialPrescription);
   const [loading, setLoading] = useState(false);
+
+  // 保存处方到 localStorage（供日记页读取）
+  useEffect(() => {
+    if (!prescription) return;
+    try {
+      const STORAGE_KEY = "prada-prescriptions";
+      const existing = localStorage.getItem(STORAGE_KEY);
+      const list = existing ? JSON.parse(existing) : [];
+      // 避免重复保存（按 id 去重）
+      if (!list.some((p: Prescription) => p.id === prescription.id)) {
+        list.push(prescription);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      }
+    } catch (e) {
+      console.error("Failed to save prescription to localStorage", e);
+    }
+  }, [prescription]);
 
   // Loading 状态
   if (loading) {
