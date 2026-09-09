@@ -1,0 +1,2550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base target="_top" />
+  <title>情绪日记 | Prada 香气地图</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F7F6F2;
+      --ink: #0D0D0D;
+      --muted: rgba(13,13,13,0.4);
+      --border: rgba(13,13,13,0.07);
+      --card-bg: #ffffff;
+      --detail-bg: #FAFAF8;
+      --serif: Georgia, 'Times New Roman', serif;
+      --sans: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    html { font-family: var(--sans); background: var(--bg); color: var(--ink); }
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(70% 40% at 0% 0%, rgba(232,160,180,0.08) 0%, rgba(232,160,180,0) 60%),
+        radial-gradient(60% 36% at 100% 8%, rgba(154,193,198,0.10) 0%, rgba(154,193,198,0) 60%),
+        var(--bg);
+    }
+    button { font-family: inherit; cursor: pointer; outline: none; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ── header ── */
+    .site-header {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px;
+      background: rgba(247,246,242,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .site-header a, .site-header span {
+      font-size: 9px; text-transform: uppercase; letter-spacing: .2em;
+      color: var(--muted);
+    }
+    .site-header .title { color: rgba(13,13,13,0.6); }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    /* 头像（香气地图开关） */
+    .avatar {
+      position: relative; width: 38px; height: 38px; border-radius: 50%;
+      border: none; background: transparent; padding: 0; flex-shrink: 0;
+    }
+    .avatar-ring {
+      position: absolute; inset: 0; border-radius: 50%; padding: 2px;
+      background: conic-gradient(from 120deg, #E8A0B4, #D9B24B, #7FA8A8, #C7B8E8, #E8A0B4);
+    }
+    .avatar-core {
+      position: absolute; inset: 3px; border-radius: 50%;
+      background: linear-gradient(145deg, #fff, #F1EDE6);
+      color: #0D0D0D; font-size: 14px; font-family: Georgia, serif;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .2s;
+    }
+    .avatar:hover .avatar-core { transform: scale(1.05); }
+    .avatar.active .avatar-ring { animation: ringspin 3s linear infinite; }
+    .avatar.active::after {
+      content: ''; position: absolute; inset: -6px; border-radius: 50%;
+      border: 1px solid rgba(232,160,180,0.6);
+      animation: ringpulse 1.6s ease-out infinite;
+    }
+    @keyframes ringspin { to { transform: rotate(360deg); } }
+    @keyframes ringpulse { 0% { transform: scale(.9); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+    /* ── page container ── */
+    .container { max-width: 672px; margin: 0 auto; padding: 32px 16px 80px; }
+
+    /* ── stats panel ── */
+    .stats-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px; margin-bottom: 28px;
+      box-shadow: 0 12px 32px -22px rgba(13,13,13,.14);
+    }
+    .stats-panel .panel-label {
+      font-size: 8px; text-transform: uppercase; letter-spacing: .2em;
+      color: rgba(13,13,13,0.35); margin-bottom: 16px;
+    }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
+    }
+    @media(max-width:520px){ .stats-grid{ grid-template-columns: repeat(2,1fr); } }
+    .stat-item .stat-sublabel {
+      font-size: 7px; text-transform: uppercase; letter-spacing: .1em;
+      color: rgba(13,13,13,0.35); margin-bottom: 4px;
+    }
+    .stat-item .big-num {
+      font-family: var(--serif); font-size: 26px; line-height: 1;
+    }
+    .stat-item .big-unit { font-size: 8px; color: rgba(13,13,13,0.35); margin-left: 2px; }
+    .dot-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .dot-label { font-size: 9px; }
+    .dot-count { font-size: 7px; color: rgba(13,13,13,0.35); }
+
+    /* ── filter bar ── */
+    .filter-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .filter-label { font-size: 7px; text-transform: uppercase; letter-spacing: .1em; color: rgba(13,13,13,0.35); margin-right: 2px; }
+    .filter-btn {
+      font-size: 7px; text-transform: uppercase; letter-spacing: .1em;
+      padding: 5px 10px; border-radius: 20px;
+      border: 1px solid rgba(13,13,13,0.14);
+      background: transparent; color: rgba(13,13,13,0.5);
+      transition: all .2s;
+    }
+    .filter-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .filter-btn:hover:not(.active){ background: rgba(13,13,13,0.04); }
+
+    /* ── prescription card ── */
+    .rx-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 18px; margin-bottom: 14px;
+      overflow: hidden; box-shadow: 0 10px 28px -22px rgba(13,13,13,.12);
+    }
+    .rx-head {
+      display: flex; align-items: flex-start; gap: 16px;
+      padding: 16px 18px;
+      width: 100%; text-align: left; background: transparent; border: none;
+      cursor: pointer;
+    }
+    .rx-head:hover { background: rgba(13,13,13,0.015); }
+
+    /* date col */
+    .rx-date { flex-shrink: 0; width: 48px; display: flex; flex-direction: column; align-items: center; }
+    .rx-index { font-size: 8px; text-transform: uppercase; letter-spacing: .15em; color: rgba(13,13,13,0.28); }
+    .rx-day { font-family: var(--serif); font-size: 17px; line-height: 1.1; color: var(--ink); margin-top: 2px; }
+    .rx-time { font-size: 8px; color: rgba(13,13,13,0.38); }
+
+    /* mid col */
+    .rx-mid { flex: 1; min-width: 0; }
+    .rx-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+    .rx-location { font-size: 10px; }
+    .rx-scene {
+      font-size: 7px; padding: 2px 8px; border-radius: 20px;
+      background: rgba(13,13,13,0.05); color: rgba(13,13,13,0.5);
+    }
+    .rx-emotions { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
+    .emotion-tag {
+      font-size: 8px; padding: 2px 6px; border-radius: 8px;
+      background: rgba(13,13,13,0.04); color: var(--ink);
+    }
+    .rx-excerpt {
+      font-size: 10px; line-height: 1.5; color: rgba(13,13,13,0.5);
+      font-style: italic;
+    }
+
+    /* right col */
+    .rx-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+    .family-tag {
+      font-size: 7px; padding: 2px 6px;
+      border: 1px solid; /* set inline */
+    }
+    .rx-fragname { font-size: 8px; color: rgba(13,13,13,0.55); text-align: right; max-width: 80px; word-break: break-all; }
+    .conflict-badge { font-size: 7px; color: #C84B4B; }
+    .chevron { font-size: 8px; color: rgba(13,13,13,0.28); transition: transform .2s; margin-top: auto; }
+    .chevron.open { transform: rotate(180deg); }
+
+    /* ── detail panel ── */
+    .rx-detail {
+      border-top: 1px solid rgba(13,13,13,0.06);
+      background: var(--detail-bg);
+      display: none;
+    }
+    .rx-detail.open { display: block; }
+    .rx-detail-full-date {
+      padding: 14px 18px 6px;
+      font-size: 8px; text-transform: uppercase; letter-spacing: .14em;
+      color: rgba(13,13,13,0.3);
+    }
+
+    /* ── 本日人格线索 (per-card) ── */
+    .dim-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 0 18px 14px; }
+    @media(max-width:440px){ .dim-row{ grid-template-columns:1fr; } }
+    .dim-cell { display: flex; align-items: flex-start; gap: 9px; padding: 10px; border-radius: 12px; border: 1px solid rgba(13,13,13,0.06); background: #fff; }
+    .dim-badge { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    .dim-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .dim-title { font-size: 9px; font-weight: 600; color: var(--ink); }
+    .dim-text { font-size: 8px; line-height: 1.45; color: rgba(13,13,13,0.44); }
+
+    /* conflict bar */
+    .conflict-bar {
+      margin: 0 18px 14px; padding: 8px 12px; border-radius: 12px;
+      font-size: 10px; line-height: 1.5;
+      background: rgba(200,75,75,0.06);
+      border: 1px solid rgba(200,75,75,0.15);
+      color: #C84B4B;
+    }
+
+    /* tri-mapping */
+    .tri-title {
+      padding: 0 18px 8px;
+      font-size: 8px; text-transform: uppercase; letter-spacing: .14em;
+      color: rgba(13,13,13,0.32);
+    }
+    .tri-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; padding: 0 18px 14px; }
+    .tri-cell { padding: 8px; border-radius: 12px; border: 1px solid rgba(13,13,13,0.06); background: #fff; }
+    .tri-cell-icon { font-size: 8px; color: rgba(13,13,13,0.38); margin-bottom: 4px; }
+    .tri-cell-label { font-size: 10px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+    .tri-cell-factors { font-size: 8px; line-height: 1.4; color: rgba(13,13,13,0.44); }
+
+    /* narrative blocks */
+    .narrative-block { padding: 0 18px 14px; }
+    .block-label {
+      font-size: 8px; text-transform: uppercase; letter-spacing: .14em;
+      color: rgba(13,13,13,0.32); margin-bottom: 6px;
+    }
+    .block-text {
+      font-size: 11px; line-height: 1.6; color: rgba(13,13,13,0.68);
+      font-family: var(--serif); font-style: italic;
+    }
+    .block-text.small { font-family: var(--sans); font-style: normal; font-size: 10px; color: rgba(13,13,13,0.55); }
+    .twin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 18px 14px; }
+    @media(max-width:440px){ .twin-grid{ grid-template-columns:1fr; } }
+
+    /* fragrance list */
+    .frag-list { display: flex; flex-direction: column; gap: 6px; padding: 0 18px 14px; }
+    .frag-row {
+      display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px;
+      border-radius: 12px; border: 1px solid rgba(13,13,13,0.06); background: #fff;
+    }
+    .frag-thumb {
+      flex-shrink: 0; width: 32px; height: 42px;
+      background: rgba(13,13,13,0.04); overflow: hidden; border-radius: 6px;
+    }
+    .frag-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .frag-rank { font-size: 7px; color: rgba(13,13,13,0.28); flex-shrink: 0; padding-top: 2px; }
+    .frag-info { flex: 1; min-width: 0; }
+    .frag-name { font-size: 10px; font-weight: 500; color: var(--ink); }
+    .frag-sub { font-size: 8px; color: rgba(13,13,13,0.44); margin-bottom: 3px; }
+    .frag-story {
+      font-size: 8px; line-height: 1.4;
+      color: rgba(13,13,13,0.36);
+      font-family: var(--serif); font-style: italic;
+    }
+    .frag-btn {
+      font-size: 7px; text-transform: uppercase; letter-spacing: .1em;
+      padding: 5px 10px; border-radius: 20px; flex-shrink: 0;
+      border: 1px solid rgba(13,13,13,0.14); color: rgba(13,13,13,0.48);
+      background: transparent;
+    }
+    .frag-btn:hover { background: rgba(13,13,13,0.04); }
+
+    /* CTA row */
+    .cta-row { padding: 0 18px 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .cta-btn {
+      display: inline-block; padding: 10px 20px; border-radius: 22px;
+      font-size: 8px; text-transform: uppercase; letter-spacing: .15em;
+      background: var(--ink); color: var(--bg);
+      border: none; cursor: pointer; transition: all .25s;
+    }
+    .cta-btn:hover { background: var(--bg); color: var(--ink); outline: 1px solid var(--ink); }
+    .cta-type { font-size: 7px; color: rgba(13,13,13,0.32); }
+
+    /* ── bottom new-entry cta ── */
+    .bottom-cta { text-align: center; margin-top: 36px; }
+    .bottom-cta a {
+      display: inline-block; padding: 12px 32px; border-radius: 24px;
+      font-size: 9px; text-transform: uppercase; letter-spacing: .15em;
+      border: 1px solid rgba(13,13,13,0.18); color: rgba(13,13,13,0.55);
+      transition: all .25s;
+    }
+    .bottom-cta a:hover { background: rgba(13,13,13,0.04); }
+
+    /* record count hint */
+    .filter-count { font-size: 8px; color: rgba(13,13,13,0.32); margin-bottom: 10px; }
+
+    /* ── 香气人格卡片 ── */
+    .personality-card {
+      display: flex; align-items: center; gap: 22px;
+      padding: 18px; margin-bottom: 20px;
+      border: 1px solid rgba(13,13,13,0.07);
+      border-radius: 18px;
+      background:
+        radial-gradient(120% 140% at 100% 0%, rgba(200,214,175,0.16) 0%, rgba(200,214,175,0) 55%),
+        #fff;
+    }
+    @media(max-width:520px){ .personality-card{ flex-direction: column; text-align: center; gap: 14px; } }
+    .p-portrait { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .p-frag-frame {
+      position: relative; width: 108px; height: 146px; border-radius: 16px;
+      overflow: hidden; cursor: pointer;
+      border: 1px solid rgba(13,13,13,0.07);
+      background:
+        radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--pf) 22%, transparent) 0%, transparent 62%),
+        linear-gradient(160deg, #F3F0EA, #EAE6DF);
+      box-shadow: 0 10px 24px -12px rgba(13,13,13,.18);
+      transition: transform .2s;
+    }
+    .p-frag-frame:hover { transform: translateY(-2px); }
+    .p-frag-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .p-frag-tag {
+      position: absolute; left: 8px; bottom: 8px;
+      font-size: 7px; letter-spacing: .08em; padding: 3px 8px; border-radius: 20px;
+      border: 1px solid; backdrop-filter: blur(6px); background: rgba(255,255,255,0.35);
+    }
+    .p-frag-cap { font-size: 7px; color: rgba(13,13,13,0.34); }
+    .p-type-meta {
+      font-size: 7px; text-transform: uppercase; letter-spacing: .18em;
+      color: rgba(13,13,13,0.28); margin-bottom: 4px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .p-type-meta::before {
+      content: ''; display: inline-block; width: 16px; height: 1px;
+      background: linear-gradient(to right, rgba(232,160,180,0.7), rgba(217,178,75,0.5));
+    }
+    .p-fit { font-size: 9px; color: rgba(13,13,13,0.45); margin-bottom: 4px; letter-spacing: .02em; }
+    .p-fit b { font-weight: 600; color: var(--ink); font-family: var(--serif); font-size: 13px; }
+    .p-info { flex: 1; min-width: 0; }
+    .p-code-line { display: flex; align-items: baseline; justify-content: center; margin-bottom: 6px; }
+    @media(min-width:521px){ .p-code-line{ justify-content: flex-start; } }
+    .p-code { font-family: var(--serif); font-size: 30px; letter-spacing: .05em; line-height: 1; }
+    .p-name { font-size: 14px; font-weight: 600; margin-left: 10px; color: rgba(13,13,13,0.75); }
+    .p-tagline { font-size: 10px; font-family: var(--serif); font-style: italic; color: rgba(13,13,13,0.55); line-height: 1.5; margin-bottom: 12px; }
+    .p-accords { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
+    @media(min-width:521px){ .p-accords{ justify-content: flex-start; } }
+    .p-accord {
+      font-size: 7px; text-transform: uppercase; letter-spacing: .12em;
+      padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(13,13,13,0.14); color: rgba(13,13,13,0.5);
+      background: rgba(13,13,13,0.02);
+    }
+    .p-axes { display: flex; flex-direction: column; gap: 8px; }
+    .axis-row { display: grid; grid-template-columns: 28px 1fr 28px; align-items: center; gap: 7px; }
+    .axis-side { font-size: 7px; text-transform: uppercase; letter-spacing: .1em; color: rgba(13,13,13,0.28); line-height: 1.15; }
+    .axis-side.right { text-align: right; }
+    .axis-side strong { font-size: 9px; display: block; }
+    .axis-side i { font-style: normal; font-size: 6px; opacity: .75; }
+    .axis-side.active { color: var(--ink); }
+    .axis-bar { position: relative; height: 3px; background: rgba(13,13,13,0.09); border-radius: 2px; }
+    .axis-fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--ink); opacity: .85; }
+    .axis-fill.right { left: auto; right: 0; }
+    .axis-knob { position: absolute; top: 50%; width: 7px; height: 7px; border-radius: 50%; background: var(--ink); transform: translate(-50%,-50%); box-shadow: 0 0 0 2px #fff; }
+
+    /* ── 香气地图 ── */
+    .map-section { margin-bottom: 22px; }
+    .map-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; flex-wrap: wrap; }
+    .map-today-tag {
+      font-size: 9px; padding: 4px 12px; border-radius: 20px;
+      background: linear-gradient(120deg, rgba(232,160,180,0.22), rgba(217,178,75,0.18));
+      color: rgba(13,13,13,0.7); letter-spacing: .03em;
+      animation: fadein .4s ease;
+    }
+    .map-hint-btn {
+      font-size: 8px; padding: 5px 12px; border-radius: 20px;
+      border: 1px dashed rgba(13,13,13,0.24); color: rgba(13,13,13,0.55);
+      background: transparent; transition: all .2s;
+    }
+    .map-hint-btn:hover { border-style: solid; border-color: rgba(13,13,13,0.4); }
+    .map-cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .cat-chip {
+      font-size: 8px; letter-spacing: .04em;
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid rgba(13,13,13,0.12); color: rgba(13,13,13,0.5);
+      background: rgba(255,255,255,0.75); transition: all .22s;
+      backdrop-filter: blur(4px);
+    }
+    .cat-chip:hover { border-color: rgba(13,13,13,0.28); background: rgba(255,255,255,0.92); }
+    .cat-chip.active { border-color: transparent; color: #fff; font-weight: 500; }
+
+    .map-viewport {
+      position: relative; height: 420px; overflow: hidden;
+      border-radius: 22px; border: 1px solid rgba(13,13,13,0.06);
+      background:
+        radial-gradient(60% 80% at 18% 12%, rgba(232,160,180,0.28) 0%, rgba(232,160,180,0) 62%),
+        radial-gradient(55% 70% at 82% 18%, rgba(154,193,198,0.28) 0%, rgba(154,193,198,0) 62%),
+        radial-gradient(70% 80% at 50% 96%, rgba(217,178,75,0.18) 0%, rgba(217,178,75,0) 60%),
+        radial-gradient(45% 55% at 75% 72%, rgba(180,160,220,0.16) 0%, rgba(180,160,220,0) 60%),
+        radial-gradient(rgba(13,13,13,0.04) 1px, transparent 1.5px),
+        linear-gradient(160deg, #F0ECE6, #FAF8F3);
+      background-size: auto, auto, auto, auto, 22px 22px, auto;
+      cursor: grab; touch-action: none; user-select: none;
+      box-shadow: 0 2px 24px -8px rgba(13,13,13,0.08);
+    }
+    .map-viewport:active { cursor: grabbing; }
+    .map-viewport.map-pulse { box-shadow: 0 0 0 3px rgba(232,160,180,0.35); }
+
+    .map-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; width: 880px; height: 520px; }
+    .map-links { position: absolute; left: 0; top: 0; pointer-events: none; }
+
+    .map-node {
+      position: absolute; width: 82px; height: 96px;
+      transform: translate(-50%, -50%);
+      display: flex; flex-direction: column; align-items: center;
+      cursor: pointer; user-select: none;
+      transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+    }
+    .map-node:hover, .map-node:focus { transform: translate(-50%, -50%) scale(1.1); z-index: 3; outline: none; }
+
+    /* Instagram 故事圆圈风格 ring */
+    .map-node-ring {
+      position: absolute; top: 0; width: 62px; height: 62px;
+      border-radius: 50%; z-index: 0;
+      background: conic-gradient(from 0deg, var(--c1) 0%, var(--c2) 40%, var(--c1) 70%, var(--c2) 100%);
+      opacity: 0;
+      transition: opacity .22s, transform .22s;
+      transform: scale(0.82);
+      filter: blur(0.5px);
+    }
+    .map-node:hover .map-node-ring,
+    .map-node:focus .map-node-ring {
+      opacity: 0.82;
+      transform: scale(1);
+      animation: ringspin 2.8s linear infinite;
+    }
+    /* 白色间隔环（Instagram 故事白边） */
+    .map-node-ring::after {
+      content: ''; position: absolute; inset: 3px; border-radius: 50%;
+      background: var(--bg, #F7F6F2);
+    }
+
+    .map-node-orb {
+      position: relative; width: 52px; height: 52px; border-radius: 50%; z-index: 1;
+      background:
+        radial-gradient(circle at 30% 24%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0) 36%),
+        radial-gradient(circle at 68% 76%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 42%),
+        radial-gradient(ellipse at 50% 110%, rgba(0,0,0,0.08) 0%, transparent 66%),
+        linear-gradient(145deg, var(--c1), var(--c2));
+      box-shadow:
+        0 10px 24px -6px var(--c2),
+        inset 0 0 0 1px rgba(255,255,255,0.32),
+        0 0 36px -8px var(--c2);
+    }
+    .map-node-orb::after {
+      content: ''; position: absolute; inset: -12px; border-radius: 50%;
+      background: radial-gradient(circle, var(--c2) 0%, transparent 68%);
+      opacity: .18; z-index: -1;
+    }
+    .map-node-core {
+      position: absolute; inset: 11px; border-radius: 50%;
+      background:
+        radial-gradient(circle at 34% 30%, rgba(255,255,255,0.68), rgba(255,255,255,0) 54%),
+        radial-gradient(circle at 52% 65%, rgba(13,13,13,0.12), transparent 68%);
+      filter: blur(0.8px);
+    }
+    /* 类别 emoji 角标 */
+    .map-node-badge {
+      position: absolute; top: 2px; right: 10px;
+      font-size: 11px; z-index: 4;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.18));
+      pointer-events: none;
+    }
+    .map-node-name {
+      margin-top: 6px; font-size: 9px; color: rgba(13,13,13,0.62);
+      max-width: 80px; text-align: center; line-height: 1.25;
+      display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      letter-spacing: .01em; z-index: 1;
+    }
+    .map-node-count {
+      font-size: 7px; color: rgba(13,13,13,0.32);
+      background: rgba(255,255,255,0.72); padding: 1px 6px; border-radius: 10px;
+      backdrop-filter: blur(4px); z-index: 1;
+    }
+
+    .map-zoom {
+      position: absolute; right: 12px; bottom: 12px; z-index: 5;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .map-zoom button {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid rgba(13,13,13,0.1);
+      background: rgba(255,255,255,0.85); color: var(--ink);
+      font-size: 15px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(6px); transition: all .2s;
+    }
+    .map-zoom button:hover { background: var(--ink); color: var(--bg); }
+    .map-hint {
+      position: absolute; left: 12px; bottom: 14px; z-index: 5;
+      font-size: 7px; letter-spacing: .08em; color: rgba(13,13,13,0.35);
+      text-transform: uppercase;
+    }
+    .map-empty {
+      position: absolute; inset: 0; z-index: 4;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: rgba(13,13,13,0.4);
+      background: rgba(247,246,242,0.4);
+    }
+    .map-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .map-legend { display: flex; gap: 10px; flex-wrap: wrap; }
+    .map-lg { display: inline-flex; align-items: center; gap: 5px; font-size: 8px; color: rgba(13,13,13,0.45); }
+    .map-lg i { width: 7px; height: 7px; border-radius: 50%; }
+    .map-footnote { font-size: 8px; color: rgba(13,13,13,0.3); }
+
+    @keyframes fadein { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+    /* ── 日期筛选 chip ── */
+    .date-chip {
+      display: inline-flex; align-items: center; gap: 6px; margin-left: 4px;
+      font-size: 8px; text-transform: uppercase; letter-spacing: .1em;
+      padding: 4px 8px; border-radius: 20px; background: var(--ink); color: var(--bg);
+    }
+    .date-chip button { background: none; border: none; color: inherit; font-size: 11px; line-height: 1; padding: 0 0 0 4px; opacity: .7; }
+    .date-chip button:hover { opacity: 1; }
+
+    /* ── 情绪趋势图 ── */
+    .trend-section { margin-bottom: 22px; padding: 18px; border-radius: 18px; border: 1px solid rgba(13,13,13,0.07); background: #fff; box-shadow: 0 12px 32px -22px rgba(13,13,13,.12); }
+    .trend-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .trend-note { font-size: 8px; color: rgba(13,13,13,0.32); }
+    .trend-svg { width: 100%; display: block; }
+    .trend-hint { font-size: 8px; color: rgba(13,13,13,0.3); margin-top: 8px; text-align: right; }
+    #trend-tip {
+      position: fixed; display: none; z-index: 60; pointer-events: none;
+      background: var(--ink); color: var(--bg);
+      font-size: 9px; line-height: 1.6; padding: 8px 12px;
+      white-space: pre-line; max-width: 200px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    }
+
+    /* ── 气味详情 Bottom Sheet ── */
+    #map-tip {
+      position: fixed; display: none; z-index: 90; pointer-events: none;
+      background: rgba(13,13,13,0.92); color: #F7F6F2;
+      font-size: 9px; line-height: 1.6; padding: 8px 12px; border-radius: 10px;
+      max-width: 210px; box-shadow: 0 6px 20px rgba(13,13,13,0.2);
+    }
+    .sheet { position: fixed; inset: 0; z-index: 100; visibility: hidden; }
+    .sheet.open { visibility: visible; }
+    .sheet-scrim { position: absolute; inset: 0; background: rgba(13,13,13,0.45); opacity: 0; transition: opacity .3s; }
+    .sheet.open .sheet-scrim { opacity: 1; }
+    .sheet-panel {
+      position: absolute; left: 0; right: 0; bottom: 0; margin: 0 auto;
+      max-width: 672px; max-height: 88vh; overflow: auto;
+      background: #fff; border-radius: 24px 24px 0 0;
+      transform: translateY(105%);
+      transition: transform .36s cubic-bezier(.2, .9, .25, 1);
+      box-shadow: 0 -18px 50px rgba(13,13,13,0.18);
+    }
+    .sheet.open .sheet-panel { transform: translateY(0); }
+    .sheet-close {
+      position: absolute; top: 14px; right: 14px; z-index: 6;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid rgba(13,13,13,0.1); background: rgba(255,255,255,0.85);
+      color: var(--ink); font-size: 13px; line-height: 1;
+      backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
+    }
+    .sheet-media {
+      position: relative; height: 330px;
+      display: flex; align-items: center; justify-content: center;
+      background:
+        radial-gradient(70% 90% at 50% 0%, color-mix(in srgb, var(--fam) 26%, transparent) 0%, transparent 65%),
+        linear-gradient(160deg, #F3F0EA, #E9E4DC);
+      overflow: hidden;
+    }
+    .sheet-media img {
+      height: 100%; max-width: 100%; object-fit: contain;
+      filter: drop-shadow(0 22px 32px rgba(13,13,13,0.24));
+    }
+    .sheet-media.no-img::before { content: '🧴'; font-size: 84px; opacity: .32; }
+    .sheet-media.no-img img { display: none; }
+    .sheet-play {
+      position: absolute; bottom: 18px; right: 18px;
+      width: 56px; height: 56px; border-radius: 50%; border: none; color: #fff;
+      font-size: 17px;
+      background:
+        radial-gradient(circle at 30% 24%, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 42%),
+        linear-gradient(135deg, #0D0D0D, #3a3a3a);
+      box-shadow: 0 10px 22px rgba(13,13,13,0.32);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sheet-play.playing { animation: playpulse 1.4s ease-out infinite; }
+    @keyframes playpulse { 0% { box-shadow: 0 10px 22px rgba(13,13,13,.32), 0 0 0 0 rgba(13,13,13,.35); } 100% { box-shadow: 0 10px 22px rgba(13,13,13,.32), 0 0 0 18px rgba(13,13,13,0); } }
+    .sheet-eq { display: none; gap: 3px; align-items: flex-end; height: 15px; }
+    .sheet-play.playing .sheet-eq { display: flex; }
+    .sheet-eq i { width: 3px; background: #fff; border-radius: 2px; animation: eq 1s ease-in-out infinite; }
+    .sheet-eq i:nth-child(1) { height: 8px; }
+    .sheet-eq i:nth-child(2) { height: 14px; animation-delay: .18s; }
+    .sheet-eq i:nth-child(3) { height: 6px; animation-delay: .36s; }
+    .sheet-eq i:nth-child(4) { height: 11px; animation-delay: .12s; }
+    @keyframes eq { 0%,100% { transform: scaleY(.5); } 50% { transform: scaleY(1); } }
+    .sheet-body { padding: 20px 22px 30px; }
+    .sheet-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .fam-tag, .cat-tag { font-size: 8px; padding: 3px 9px; border-radius: 20px; border: 1px solid; }
+    .sheet-name { font-family: var(--serif); font-size: 24px; line-height: 1.2; margin-bottom: 4px; }
+    .sheet-coll { font-size: 10px; color: rgba(13,13,13,0.42); margin-bottom: 16px; }
+    .sheet-notes { display: grid; gap: 8px; margin-bottom: 18px; }
+    .note-label { font-size: 7px; text-transform: uppercase; letter-spacing: .12em; color: rgba(13,13,13,0.34); margin-bottom: 5px; }
+    .note-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .note-chip {
+      font-size: 9px; padding: 3px 8px; border-radius: 8px;
+      background: rgba(13,13,13,0.04); color: rgba(13,13,13,0.65);
+    }
+    .sheet-story {
+      font-size: 11px; line-height: 1.7; color: rgba(13,13,13,0.62);
+      font-family: var(--serif); font-style: italic; margin-bottom: 20px;
+    }
+    .sheet-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .sheet-cta {
+      padding: 11px 22px; border-radius: 22px; border: none;
+      background: var(--ink); color: var(--bg);
+      font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
+    }
+    .sheet-buy {
+      padding: 11px 22px; border-radius: 22px;
+      border: 1px solid rgba(13,13,13,0.16); color: rgba(13,13,13,0.6);
+      font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
+      transition: all .2s;
+    }
+    .sheet-buy:hover { background: rgba(13,13,13,0.04); }
+
+    /* ── 漂流瓶 · 分享 ─────────────────────────────── */
+    .bottle-btn {
+      margin-top: 14px; display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px; border-radius: 22px;
+      border: 1px solid rgba(13,13,13,0.16);
+      background: linear-gradient(120deg, rgba(232,160,180,0.14), rgba(217,178,75,0.12));
+      color: rgba(13,13,13,0.68); font-size: 9px; letter-spacing: .06em;
+      transition: all .22s;
+    }
+    .bottle-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(13,13,13,0.34);
+      box-shadow: 0 8px 20px -10px rgba(13,13,13,0.25);
+    }
+    .bottle-btn-ico { font-size: 15px; line-height: 1; }
+
+    .bottle-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      visibility: hidden; opacity: 0;
+      transition: opacity .45s, visibility .45s;
+      background: radial-gradient(130% 100% at 50% 0%, #1B3A5C 0%, #0E2540 46%, #071427 100%);
+      overflow: hidden;
+    }
+    .bottle-overlay.open { visibility: visible; opacity: 1; }
+    .bottle-close {
+      position: absolute; top: 18px; right: 18px; z-index: 6;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.85); font-size: 14px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(8px); transition: all .2s;
+    }
+    .bottle-close:hover { background: rgba(255,255,255,0.18); }
+
+    .bottle-stars { position: absolute; inset: 0; pointer-events: none; }
+    .bottle-star {
+      position: absolute; width: 2px; height: 2px; border-radius: 50%;
+      background: #fff; opacity: .7;
+      animation: starTw 3s ease-in-out infinite;
+    }
+    @keyframes starTw { 0%,100% { opacity: .2; } 50% { opacity: .9; } }
+
+    .bottle-scene {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column; align-items: center;
+      width: min(340px, 92vw); text-align: center; color: #fff;
+      padding: 16px 0 24px;
+    }
+    .bottle-title {
+      font-family: var(--serif); font-size: 22px; letter-spacing: .2em;
+      margin-bottom: 6px; color: #fff;
+    }
+    .bottle-title em { font-style: normal; color: #B9E2FF; }
+    .bottle-sub {
+      font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+      color: rgba(255,255,255,0.5); margin-bottom: 12px;
+    }
+
+    .bottle-float {
+      animation: bottleBob 4.5s ease-in-out infinite;
+      margin: 4px 0 8px; position: relative; z-index: 2;
+    }
+    .bottle-float svg {
+      display: block; width: 126px; height: auto;
+      filter: drop-shadow(0 20px 30px rgba(0,0,0,0.45));
+    }
+    @keyframes bottleBob {
+      0%,100% { transform: translateY(0) rotate(-2.5deg); }
+      50% { transform: translateY(-15px) rotate(2.5deg); }
+    }
+
+    .bottle-waves { position: absolute; left: 0; right: 0; bottom: -6px; height: 140px; pointer-events: none; }
+    .bottle-wave {
+      position: absolute; left: -50%; bottom: 0; width: 200%; height: 140px;
+      animation: waveSlide 9s linear infinite;
+    }
+    .bottle-wave.w2 { animation-duration: 13s; animation-direction: reverse; opacity: .6; bottom: -20px; }
+    .bottle-wave.w3 { animation-duration: 7s; opacity: .45; bottom: -34px; }
+    @keyframes waveSlide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    .bottle-report {
+      margin: 10px 0 4px; padding: 13px 18px; width: 100%;
+      border: 1px solid rgba(255,255,255,0.16); border-radius: 16px;
+      background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .bottle-report .br-emoji { font-size: 24px; line-height: 1; }
+    .bottle-report .br-ep { font-family: var(--serif); font-size: 21px; letter-spacing: .06em; }
+    .bottle-report .br-frag { font-size: 10px; color: #B9E2FF; margin-top: 2px; }
+
+    .bottle-actions {
+      display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 14px;
+    }
+    .bottle-action {
+      padding: 10px 16px; border-radius: 22px; border: none;
+      font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+      background: rgba(255,255,255,0.14); color: #fff;
+      backdrop-filter: blur(8px); transition: all .22s;
+    }
+    .bottle-action:hover { background: rgba(255,255,255,0.26); transform: translateY(-1px); }
+    .bottle-action.primary {
+      background: linear-gradient(135deg, #5BB0E8, #2E6FA8); color: #fff;
+      box-shadow: 0 10px 22px -8px rgba(60,150,220,0.6);
+    }
+    .bottle-action.primary:hover { background: linear-gradient(135deg, #6FC0F5, #3A80BC); }
+
+    .bottle-status {
+      margin-top: 12px; min-height: 14px;
+      font-size: 9px; color: #8FD0FF; letter-spacing: .06em;
+      opacity: 0; transition: opacity .3s;
+    }
+    .bottle-status.show { opacity: 1; }
+
+    .bottle-overlay.recv .bottle-float { cursor: pointer; }
+    .bottle-letter {
+      display: none; margin-top: 12px; width: 100%;
+      background: linear-gradient(160deg, #FFF9EC, #F3E9D8);
+      color: #2A2318; border-radius: 18px; padding: 20px 22px;
+      text-align: left; box-shadow: 0 20px 40px -18px rgba(0,0,0,0.5);
+      animation: letterIn .5s ease;
+    }
+    .bottle-letter.open { display: block; }
+    @keyframes letterIn { from { opacity: 0; transform: translateY(16px) rotate(-1deg); } to { opacity: 1; transform: none; } }
+    .bottle-letter .bl-brand { font-size: 8px; letter-spacing: .22em; text-transform: uppercase; color: rgba(42,35,24,0.45); margin-bottom: 8px; }
+    .bottle-letter .bl-ep { font-family: var(--serif); font-size: 26px; letter-spacing: .05em; margin-bottom: 4px; }
+    .bottle-letter .bl-line { height: 1px; background: rgba(42,35,24,0.12); margin: 12px 0; }
+    .bottle-letter .bl-label { font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: rgba(42,35,24,0.42); margin-bottom: 4px; }
+    .bottle-letter .bl-frag { font-size: 13px; font-family: var(--serif); color: #7A4A2B; }
+    .bottle-letter .bl-fit { font-size: 11px; color: rgba(42,35,24,0.72); }
+    .bottle-letter .bl-fit b { font-size: 16px; font-family: var(--serif); color: #2A2318; }
+    .bottle-letter .bl-btn {
+      margin-top: 16px; width: 100%; padding: 12px;
+      border: none; border-radius: 20px;
+      background: #0D0D0D; color: #F7F6F2;
+      font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+      cursor: pointer; transition: all .2s;
+    }
+    .bottle-letter .bl-btn:hover { opacity: .85; }
+    .bottle-letter .p-accord { border-color: rgba(42,35,24,0.2); color: rgba(42,35,24,0.62); background: rgba(42,35,24,0.03); }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────── -->
+<header class="site-header">
+  <a href="/">← 返回</a>
+  <span class="title">情绪日记</span>
+  <div class="header-right">
+    <span id="total-count">0 条记录</span>
+    <button class="avatar" id="avatar-btn" onclick="activateMap()" aria-label="香气地图 · 查看今日收集" title="香气地图 · 查看今日收集">
+      <span class="avatar-ring"></span>
+      <span class="avatar-core">P</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── Main ───────────────────────────────────────────────── -->
+<main class="container" id="app">
+  <!-- 加载占位 -->
+  <p style="font-size:9px;text-transform:uppercase;letter-spacing:.2em;color:rgba(13,13,13,0.3);text-align:center;padding:80px 0;">
+    读取香气档案...
+  </p>
+</main>
+
+<!-- ── 地图节点浮层 ── -->
+<div id="map-tip"></div>
+
+<!-- ── 气味详情 Bottom Sheet ── -->
+<div id="scent-sheet" class="sheet">
+  <div class="sheet-scrim" onclick="closeScent()"></div>
+  <div class="sheet-panel">
+    <button class="sheet-close" onclick="closeScent()" aria-label="关闭">✕</button>
+    <div id="scent-sheet-body"></div>
+  </div>
+</div>
+
+<!-- ── 漂流瓶 · 分享 ─────────────────────────── -->
+<div id="bottle-share" class="bottle-overlay">
+  <button class="bottle-close" onclick="closeBottle()" aria-label="关闭">✕</button>
+  <div class="bottle-stars"></div>
+  <div class="bottle-scene">
+    <h3 class="bottle-title"><em>漂</em>流瓶</h3>
+    <p class="bottle-sub">Prada · 香气人格报告</p>
+    <div class="bottle-float" id="bottle-float" onclick="openBottleFloat()" aria-label="漂流瓶"></div>
+    <div class="bottle-report"></div>
+    <div class="bottle-actions" id="bottle-actions"></div>
+    <p class="bottle-status"></p>
+    <div class="bottle-letter" id="bottle-letter"></div>
+  </div>
+  <div class="bottle-waves" id="bottle-waves"></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// 常量 & 映射表
+// ─────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'prada-prescriptions';
+const MAP_W = 880, MAP_H = 520;
+
+const EMOTION_EMOJI   = { happy:'😊', calm:'😌', irritated:'😤', anxious:'😰', sad:'😢', energetic:'⚡', tired:'😴', romantic:'🌹' };
+const EMOTION_LABEL   = { happy:'开心', calm:'平静', irritated:'烦躁', anxious:'焦虑', sad:'悲伤', energetic:'兴奋', tired:'疲惫', romantic:'浪漫' };
+const WEATHER_EMOJI   = { sunny:'☀️', cloudy:'⛅', rainy:'🌧️', snowy:'🌨️', foggy:'🌫️', stormy:'⛈️' };
+const SCENE_LABEL     = { sleep_relax:'睡前放松', deep_work:'深度高效工作', mercury_reversal:'水逆平复', social_boost:'社交提振', commute_subway:'通勤地铁', outdoor_park:'户外公园' };
+const FAMILY_LABEL    = { citrus:'柑橘调', floral:'花香调', woody:'木质调', oriental:'东方调', fresh:'清新调', aromatic:'芳香调', chypre:'西普调', fougere:'馥奇调' };
+const FAMILY_COLOR    = { citrus:'#E8B84B', floral:'#E8A0B4', woody:'#A07850', oriental:'#C07840', fresh:'#5CB8B2', aromatic:'#7A9E6A', chypre:'#8B7355', fougere:'#6A9A6A' };
+const CTA_TYPE_LABEL  = { buy_trial:'购买试香装', buy_full:'购买正装', subscribe:'订阅替换芯', gift_box:'定制礼盒' };
+
+// 香气分类（情绪 / 场景）
+const SCENT_CATEGORIES = {
+  nature: { label:'自然', emoji:'🌿', color:'#7A9E6A' },
+  happy:  { label:'快乐', emoji:'😊', color:'#E8A0B4' },
+  energy: { label:'活力', emoji:'⚡', color:'#E8B84B' },
+  travel: { label:'旅行', emoji:'✈️', color:'#5CB8B2' },
+};
+
+// ─────────────────────────────────────────────────────────────
+// Prada 香氛知识库（香水名 / 图片 / 香调均来自 Prada 官方仓库）
+// ─────────────────────────────────────────────────────────────
+const PRADA_DB = {
+  'prada-paradoxe': {
+    id:'prada-paradoxe', name:'Prada Paradoxe 我本莫测', collection:'Paradoxe', family:'oriental',
+    notes:{ top:['梨','蜜橘','香柠檬'], heart:['橙花','橙花油','茉莉'], base:['香草','琥珀','白麝香','安息香脂'] },
+    scenes:['social_boost','deep_work','commute_subway'], suitableEmotions:['happy','calm','energetic','romantic'],
+    effects:['uplifting','confidence','warmth'], volatility:'medium', tempRange:{min:10,max:30},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1351/2HDZF0Z99/1A1351_2HDZ_F0Z99_P_ML030_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/paradoxe-edp-30-ml/1A1351_2HDZ_F0Z99_P_ML030',
+    story:'花香调琥珀香氛，融合标志性成分的矛盾碰撞。一级萃取的橙花花蕾精华重塑 Prada 的曼妙清新之感，琥珀(Ambrofix)颠覆感官，白麝香(Serenolide)释放浓郁而微妙的怡人香韵。「我唯一害怕的是无聊」——Miuccia Prada 女士。'
+  },
+  'prada-paradoxe-radical-essence': {
+    id:'prada-paradoxe-radical-essence', name:'Prada Paradoxe Radical Essence 我本莫测精醇', collection:'Paradoxe', family:'woody',
+    notes:{ top:['橙花油','橙花'], heart:['开心果'], base:['檀香木'] },
+    scenes:['sleep_relax','mercury_reversal'], suitableEmotions:['calm','sad','anxious','romantic'],
+    effects:['grounding','comfort','introspection'], volatility:'low', tempRange:{min:5,max:25},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1355/2H0PF0Z99/1A1355_2H0P_F0Z99_P_ML030_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/paradoxe-radical-essence-edp-30-ml/1A1355_2H0P_F0Z99_P_ML030',
+    story:'重新诠释甜香调的意外惊喜。橙花的清新与开心果的坚果甜香交织，檀香木的温润收尾带来被包裹的安全感。适合在寒冷的日子里，用温暖的木质花香包裹自己。'
+  },
+  'prada-candy': {
+    id:'prada-candy', name:'Prada Candy 卡迪小姐', collection:'Candy', family:'oriental',
+    notes:{ top:['焦糖'], heart:['脂粉麝香'], base:['安息香脂','香草'] },
+    scenes:['sleep_relax','mercury_reversal'], suitableEmotions:['sad','anxious','romantic','tired'],
+    effects:['comfort','playful','warmth'], volatility:'low', tempRange:{min:5,max:22},
+    imageUrl:'/fragrances/prada-candy.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/womens/accessories/fragrances/c/10573CN',
+    story:'焦糖的甜蜜拥抱，如同回到最安心的港湾。脂粉麝香增添柔美层次，安息香脂与香草的基调带来持久而温暖的余韵。'
+  },
+  'prada-infusion-iris': {
+    id:'prada-infusion-iris', name:'Prada Les Infusions 浮梦鸢尾', collection:'Les Infusions', family:'woody',
+    notes:{ top:['鸢尾花'], heart:['橙花油','橘子'], base:['安息香脂'] },
+    scenes:['deep_work','commute_subway','social_boost'], suitableEmotions:['calm','anxious','irritated'],
+    effects:['calming','elegance','focus'], volatility:'low', tempRange:{min:10,max:30},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1041/2HCQF0Z99/1A1041_2HCQ_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/les-infusions-iris-edp-100-ml/1A1041_2HCQ_F0Z99_P_ML100',
+    story:'Infusion 系列的灵魂之作。鸢尾花是 Prada 的标志性香材，以极简主义美学呈现其纯净与优雅。辨识度极高的脂粉感，知性温柔的气息，帮助你在纷繁中找到内心的秩序。'
+  },
+  'prada-infusion-cedre': {
+    id:'prada-infusion-cedre', name:'Prada Infusion 融雪松木', collection:'Les Infusions', family:'woody',
+    notes:{ top:['鸢尾花','橙花油'], heart:['雪松'], base:['焚香','安息香脂','香根草'] },
+    scenes:['sleep_relax','mercury_reversal','deep_work'], suitableEmotions:['calm','sad','irritated','anxious'],
+    effects:['grounding','calming','introspection'], volatility:'low', tempRange:{min:5,max:28},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1042/2HCPF0Z99/1A1042_2HCP_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/prada-infusion-cedre-edp-100-ml/1A1042_2HCP_F0Z99_P_ML100',
+    story:'鸢尾与雪松如走钢索般寻求微妙的平衡，橙花油带来清新的开场，焚香的烟熏感与安息香脂的温润在基底交织。活力满满的木质花香，别致解读鸢尾女王。'
+  },
+  'prada-infusion-gingembre': {
+    id:'prada-infusion-gingembre', name:'Prada Infusion 辛爽生姜', collection:'Les Infusions', family:'fresh',
+    notes:{ top:['绿橘'], heart:['生姜','天竺葵'], base:['香根草'] },
+    scenes:['deep_work','commute_subway','outdoor_park'], suitableEmotions:['happy','energetic','tired','anxious'],
+    effects:['refreshing','energizing','clarity'], volatility:'high', tempRange:{min:20,max:40},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1053/2HEDF0Z99/1A1053_2HED_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/prada-infusion-de-gingembre-edp-100-ml/1A1053_2HED_F0Z99_P_ML100',
+    story:'将生姜的活力个性糅入木质柑橘的芬芳中。绿橘的清爽开场如同春天的第一缕阳光，生姜的辛辣与天竺葵的花香交织，香根草的木质基底带来沉稳收尾。唯一款只以生姜作为主角的香水。'
+  },
+  'prada-infusion-neroli': {
+    id:'prada-infusion-neroli', name:'Prada Infusion 浅醉橙花', collection:'Les Infusions', family:'citrus',
+    notes:{ top:['橙花'], heart:['橘子','白松香'], base:['橙花油'] },
+    scenes:['social_boost','outdoor_park','commute_subway'], suitableEmotions:['happy','calm','energetic'],
+    effects:['refreshing','uplifting','confidence'], volatility:'high', tempRange:{min:18,max:38},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1043/2HCJF0Z99/1A1043_2HCJ_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/prada-infusion-fleur-doranger-edp-100-ml/1A1043_2HCJ_F0Z99_P_ML100',
+    story:'Infusion 系列对橙花的诗意解读。清新的橙花开场，橘子的果香与白松香的绿意交织，最终以纯净的橙花油收尾。如同地中海午后的阳光，温暖而不腻，清新而不冷。'
+  },
+  'prada-infusion-rose': {
+    id:'prada-infusion-rose', name:'Prada Infusion 浴水玫瑰', collection:'Les Infusions', family:'floral',
+    notes:{ top:['玫瑰'], heart:['橘子','白松香'], base:['橙花油'] },
+    scenes:['sleep_relax','social_boost'], suitableEmotions:['happy','romantic','calm'],
+    effects:['romantic','feminine','calming'], volatility:'medium', tempRange:{min:12,max:30},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1048/2HCMF0Z99/1A1048_2HCM_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/prada-infusion-rose-edp-100-ml/1A1048_2HCM_F0Z99_P_ML100',
+    story:'Infusion 系列对玫瑰的极简诠释。不追求繁复的花束效果，而是捕捉玫瑰最纯净的一面。橘子的清新与白松香的绿意让玫瑰不再甜腻，橙花油的基底带来干净的收尾。'
+  },
+  'prada-infusion-vanille': {
+    id:'prada-infusion-vanille', name:'Prada Infusion 夜雨香草', collection:'Les Infusions', family:'oriental',
+    notes:{ top:['香草'], heart:['安息香脂'], base:['檀香木','麝香'] },
+    scenes:['sleep_relax','mercury_reversal'], suitableEmotions:['sad','anxious','tired','romantic'],
+    effects:['comfort','warmth','grounding'], volatility:'low', tempRange:{min:5,max:25},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1050/2HDXF0Z99/1A1050_2HDX_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/prada-infusion-de-vanille-edp-100-ml/1A1050_2HDX_F0Z99_P_ML100',
+    story:'如同雨夜窗边的一杯香草拿铁。安息香脂的烟熏感与檀香木的温润让香草变得深沉而有层次。适合在需要被温暖包裹的夜晚使用。'
+  },
+  'prada-infusion-ylang': {
+    id:'prada-infusion-ylang', name:'Prada Infusion 轻雾依兰', collection:'Les Infusions', family:'floral',
+    notes:{ top:['依兰'], heart:['橙花油','茉莉'], base:['白麝香','檀香木'] },
+    scenes:['sleep_relax','social_boost'], suitableEmotions:['calm','romantic','happy'],
+    effects:['romantic','feminine','calming'], volatility:'medium', tempRange:{min:15,max:32},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/1/1A1/1A1051/2HDWF0Z99/1A1051_2HDW_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/prada-infusion-ylang-edp-100-ml/1A1051_2HDW_F0Z99_P_ML100',
+    story:'依兰花的异域风情在 Infusion 系列中被轻柔化处理。如薄雾般轻盈的花香，白麝香与檀香木的基底让这份柔美不会过于甜腻。'
+  },
+  'prada-luna-rossa-ocean': {
+    id:'prada-luna-rossa-ocean', name:'Prada Luna Rossa Ocean 红月海洋', collection:'Luna Rossa', family:'aromatic',
+    notes:{ top:['香柠檬','粉红胡椒','艾蒿'], heart:['薰衣草','鸢尾花','鼠尾草','绒面革','藏红花'], base:['麝香','香根草','广藿香'] },
+    scenes:['outdoor_park','commute_subway','social_boost','deep_work'], suitableEmotions:['happy','energetic','tired'],
+    effects:['energizing','confidence','freshness'], volatility:'medium', tempRange:{min:15,max:38},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/2/2A1/2A1156/2D00F0Z99/2A1156_2D00_F0Z99_P_ML050_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/luna-rossa-ocean-edt-50-ml/2A1156_2D00_F0Z99_P_ML050',
+    story:'佛手柑的性感魅惑与香根草的馥郁雅致形成热烈碰撞，鸢尾的优雅迷情藏于中调，薰衣草和鼠尾草带来清新澄澈质感，奇特的皮革中调营造第二皮肤效果。'
+  },
+  'prada-luna-rossa-carbon': {
+    id:'prada-luna-rossa-carbon', name:'Prada Luna Rossa Carbon 红月炫黑', collection:'Luna Rossa', family:'aromatic',
+    notes:{ top:['香柠檬','胡椒'], heart:['薰衣草'], base:['降龙涎香醚','广藿香'] },
+    scenes:['deep_work','commute_subway','social_boost'], suitableEmotions:['happy','energetic','calm'],
+    effects:['energizing','confidence','freshness'], volatility:'medium', tempRange:{min:10,max:35},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/2/2A1/2A1154/2HC6F0Z99/2A1154_2HC6_F0Z99_P_ML050_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/luna-rossa-carbon-edt-50-ml/2A1154_2HC6_F0Z99_P_ML050',
+    story:'从 Prada 标志性的高技术材料中获取创意灵感。香柠檬与胡椒的清新辛辣开场，薰衣草的芳香带来平衡，降龙涎香醚与广藿香的基底散发深沉而现代的男性气息。'
+  },
+  'prada-lhomme': {
+    id:'prada-lhomme', name:"Prada L'Homme 绅士", collection:"L'Homme", family:'woody',
+    notes:{ top:['橙花油','胡椒','小豆蔻','胡萝卜籽'], heart:['鸢尾花','紫罗兰','天竺葵','马黛茶'], base:['琥珀','雪松','广藿香','檀香木'] },
+    scenes:['deep_work','social_boost','commute_subway'], suitableEmotions:['calm','happy','energetic'],
+    effects:['elegance','confidence','sophistication'], volatility:'low', tempRange:{min:10,max:30},
+    imageUrl:'https://www.prada.com/content/dam/pradabkg_products/2/2A1/2A1251/2HC0F0Z99/2A1251_2HC0_F0Z99_P_ML100_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg',
+    purchaseUrl:'https://www.prada.cn/cn/zh/p/lhomme-prada-edt-100-ml/2A1251_2HC0_F0Z99_P_ML100',
+    story:'以男士馥奇(Fougère)的经典成分调制，糅合 Prada 的标志性男女通用香调——鸢尾和琥珀。多种独特香调精心混合，梦幻而又张扬，高贵而又迷人。'
+  },
+};
+
+// Mock 数据里的旧 id → 真实仓库 id
+const PRADA_ALIAS = {
+  'prada-luna-rossa':        'prada-luna-rossa-ocean',
+  'prada-infusion-diris':    'prada-lhomme',
+  'prada-les-infusions-iris':'prada-infusion-iris',
+  'prada-infusion-mandarine':'prada-infusion-neroli',
+};
+
+function pradaLookup(frag) {
+  if (!frag) return null;
+  if (PRADA_DB[frag.id]) return PRADA_DB[frag.id];
+  const alias = PRADA_ALIAS[frag.id];
+  return alias && PRADA_DB[alias] ? PRADA_DB[alias] : null;
+}
+function fragName(frag) {
+  const db = pradaLookup(frag);
+  return db ? db.name : (frag && (frag.name || frag.id)) || '';
+}
+function fragImage(frag) {
+  const db = pradaLookup(frag);
+  return db ? db.imageUrl : (frag && frag.imageUrl);
+}
+
+function shortFragName(name) {
+  const s = String(name || '');
+  const cleaned = s.replace(/^Prada\s+/i, '');
+  const m = cleaned.match(/[一-龥]+$/);
+  if (m && m[0].length <= 6) return m[0];
+  const parts = cleaned.split(/\s+/);
+  return parts[parts.length - 1] || cleaned;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 香气人格 — 8 款人格 (Prada 文艺高级调性)
+// 四维光谱: 外放-内敛 · 具象-抽象 · 理性-感性 · 秩序-随性
+// ep 即人格名
+// ─────────────────────────────────────────────────────────────
+const PERSONALITY_TYPES = {
+  moonstone:{
+    ep:'静谧者',
+    tagline:'在沉默中完成最深的表达，清透如月色。',
+    emoji:'🌙', c1:'#E8EEF4', c2:'#9FB6CC', cut:0,
+    sig:['鸢尾','白麝香','粉感'],
+    profile:{ ei:25, sn:30, tf:28, jp:68 }
+  },
+  amber:{
+    ep:'沉思者',
+    tagline:'时间的温度被琥珀封存，沉稳而值得回味。',
+    emoji:'✨', c1:'#F5D8A8', c2:'#C67F2E', cut:1,
+    sig:['琥珀','香草','安息香'],
+    profile:{ ei:25, sn:72, tf:74, jp:30 }
+  },
+  emerald:{
+    ep:'森林诗人',
+    tagline:'森林的低语，深沉缓慢，自成一个世界。',
+    emoji:'🌲', c1:'#BFD8C9', c2:'#3E7A5E', cut:0,
+    sig:['苔藓','雪松','广藿香'],
+    profile:{ ei:25, sn:75, tf:28, jp:68 }
+  },
+  aquamarine:{
+    ep:'逐风者',
+    tagline:'风从海面来，吹散所有滞重，清冽而自由。',
+    emoji:'🌊', c1:'#C4E4E6', c2:'#3E8F96', cut:2,
+    sig:['海洋','薄荷','柑橘'],
+    profile:{ ei:74, sn:28, tf:72, jp:68 }
+  },
+  rosequartz:{
+    ep:'心动家',
+    tagline:'以柔软对抗坚硬的世界，玫瑰在雾里开了又开。',
+    emoji:'🌹', c1:'#F2CED8', c2:'#C46A82', cut:1,
+    sig:['玫瑰','牡丹','白麝香'],
+    profile:{ ei:72, sn:30, tf:26, jp:68 }
+  },
+  amethyst:{
+    ep:'梦境收藏家',
+    tagline:'夜色里的幻觉，清醒又迷离，像一场不愿醒来的梦。',
+    emoji:'🔮', c1:'#D8CBE8', c2:'#6E4E96', cut:2,
+    sig:['薰衣草','鸢尾','辛香'],
+    profile:{ ei:28, sn:74, tf:28, jp:30 }
+  },
+  obsidian:{
+    ep:'锋芒者',
+    tagline:'克制的锋芒来自深暗处，冷峻、精确、不可复制。',
+    emoji:'⬛', c1:'#5A5A5A', c2:'#161616', cut:0, dark:true,
+    sig:['乌木','皮革','焚香'],
+    profile:{ ei:74, sn:72, tf:76, jp:30 }
+  },
+  citrine:{
+    ep:'日光者',
+    tagline:'把清晨的阳光穿在身上，明亮而不过分喧哗。',
+    emoji:'🍊', c1:'#F7E0A8', c2:'#D99E2E', cut:1,
+    sig:['柑橘','橙花','蜂蜜'],
+    profile:{ ei:72, sn:28, tf:26, jp:32 }
+  },
+};
+
+const AXIS_META = {
+  EI:{ left:'E', leftName:'外放', right:'I', rightName:'内敛' },
+  SN:{ left:'S', leftName:'具象', right:'N', rightName:'抽象' },
+  TF:{ left:'T', leftName:'理性', right:'F', rightName:'感性' },
+  JP:{ left:'J', leftName:'秩序', right:'P', rightName:'随性' },
+};
+
+const S_FAMILIES     = ['fresh','citrus','floral','aromatic'];
+const N_FAMILIES     = ['oriental','chypre','fougere','woody'];
+const E_SCENES       = ['social_boost','outdoor_park','commute_subway'];
+const I_SCENES       = ['sleep_relax','deep_work','mercury_reversal'];
+const FEEL_EMOTIONS  = ['anxious','sad','romantic','irritated'];
+const STATE_EMOTIONS = ['happy','calm','energetic','tired'];
+
+function computePersonality(list) {
+  if (!list || !list.length) return null;
+  let E=0, I=0, S=0, N=0, T=0, F=0;
+  const famSet = new Set();
+
+  list.forEach(rx => {
+    const user  = (rx.request && rx.request.user) || {};
+    const scene = user.scene;
+    const emotions = user.emotions || [];
+    const fams = (rx.recommendedFragrances||[]).map(f=>f.family);
+    fams.forEach(f => f && famSet.add(f));
+
+    if (E_SCENES.includes(scene)) E++;
+    else if (I_SCENES.includes(scene)) I++;
+    else {
+      const ed = rx.energyDeviation || {};
+      if ((ed.emotionEnergy||0) < (ed.environmentEnergy||0)) I++; else E++;
+    }
+
+    fams.forEach(f => {
+      if (S_FAMILIES.includes(f)) S++;
+      else if (N_FAMILIES.includes(f)) N++;
+    });
+
+    const fCnt = emotions.filter(e=>FEEL_EMOTIONS.includes(e)).length;
+    const sCnt = emotions.filter(e=>STATE_EMOTIONS.includes(e)).length;
+    if (fCnt >= sCnt) F += Math.max(fCnt,1); else T += Math.max(sCnt,1);
+    if (['deep_work','commute_subway'].includes(scene)) T++;
+  });
+
+  const ePct = Math.round(E/(E+I||1)*100);
+  const sPct = Math.round(S/(S+N||1)*100);
+  const tPct = Math.round(T/(T+F||1)*100);
+  const pPct = list.length <= 1 ? 32 : Math.min(100, Math.round(famSet.size/list.length*80));
+
+  const actual = { ei:ePct, sn:sPct, tf:tPct, jp:100-pPct };
+  let best = PERSONALITY_TYPES.citrine, bestD = Infinity, bestFit = 0;
+  Object.values(PERSONALITY_TYPES).forEach(t => {
+    const pr = t.profile;
+    const d = Math.hypot(actual.ei-pr.ei, actual.sn-pr.sn, actual.tf-pr.tf, actual.jp-pr.jp);
+    const sumAbs = Math.abs(actual.ei-pr.ei) + Math.abs(actual.sn-pr.sn) + Math.abs(actual.tf-pr.tf) + Math.abs(actual.jp-pr.jp);
+    const fit = Math.max(0, Math.min(100, Math.round(100 - sumAbs/4)));
+    if (d < bestD) { bestD = d; best = t; bestFit = fit; }
+  });
+
+  return {
+    type: best, fit: bestFit, count: list.length,
+    axes: [
+      { key:'EI', leftPct:ePct },
+      { key:'SN', leftPct:sPct },
+      { key:'TF', leftPct:tPct },
+      { key:'JP', leftPct:100-pPct },
+    ],
+  };
+}
+
+function axisBarHTML(axis) {
+  const m = AXIS_META[axis.key];
+  const leftActive = axis.leftPct >= 50;
+  const pct = leftActive ? axis.leftPct : 100 - axis.leftPct;
+  return `<div class="axis-row">
+    <span class="axis-side ${leftActive?'active':''}"><strong>${m.leftName}</strong><i>${m.left}</i></span>
+    <div class="axis-bar">
+      <div class="axis-fill ${leftActive?'':'right'}" style="width:${pct}%"></div>
+      <span class="axis-knob" style="left:${axis.leftPct}%"></span>
+    </div>
+    <span class="axis-side right ${leftActive?'':'active'}"><strong>${m.rightName}</strong><i>${m.right}</i></span>
+  </div>`;
+}
+
+// 用户偏好匹配出的"最适宜香水"：出现频次 + 最近一次记录加权
+function bestPerfume(list) {
+  if (!list || !list.length) return null;
+  const latestT = Math.max(...list.map(rx => new Date(rx.createdAt).getTime()));
+  const t = {};
+  list.forEach(rx => {
+    const isLatest = new Date(rx.createdAt).getTime() === latestT;
+    (rx.recommendedFragrances||[]).forEach((f,i) => {
+      const key = f.id || f.name;
+      const rec = t[key] = t[key] || { frag:f, score:0, last:0 };
+      rec.score += (isLatest ? 2 : 1) + (i===0 ? 2 : (i===1 ? 1 : 0));
+      rec.last = Math.max(rec.last, new Date(rx.createdAt).getTime());
+    });
+  });
+  const best = Object.values(t).sort((a,b) => b.score - a.score || b.last - a.last)[0];
+  return best ? best.frag : null;
+}
+
+function perfumePortraitHTML(frag, uid) {
+  const name = fragName(frag);
+  const img = fragImage(frag);
+  const fam = frag.family;
+  const col = FAMILY_COLOR[fam] || '#8A8A8A';
+  return `<div class="p-portrait" onclick="openScent('${frag.id}')" title="查看 ${name}">
+    <div class="p-frag-frame" style="--pf:${col}">
+      ${img ? `<img class="p-frag-img" src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none'">` : ''}
+      <span class="p-frag-tag" style="color:${col};border-color:${col}55;background:${col}18">${FAMILY_LABEL[fam]||fam}</span>
+    </div>
+    <span class="p-frag-cap">本命香 · 点按查看</span>
+  </div>`;
+}
+
+function renderPersonality(list) {
+  const p = computePersonality(list);
+  if (!p) return '';
+  const t = p.type;
+  const accords = (t.sig||[]).map(a => `<span class="p-accord">${a}</span>`).join('');
+  const axes = p.axes.map(axisBarHTML).join('');
+  const best = bestPerfume(list);
+  const portrait = best ? perfumePortraitHTML(best, 'main') : '';
+  const bestName = best ? fragName(best) : '—';
+  return `<div class="personality-card">
+    ${portrait}
+    <div class="p-info">
+      <p class="p-type-meta">人格名</p>
+      <div class="p-code-line"><span class="p-code">${t.ep}</span><span class="p-name">${t.emoji}</span></div>
+      <p class="p-tagline">${t.tagline}</p>
+      <div class="p-accords">${accords}</div>
+      <div class="p-fit">本命香 · <b>${bestName}</b></div>
+      <div class="p-fit">人格契合 <b>${p.fit}%</b> · 基于 ${p.count} 次记录</div>
+      <div class="p-axes">${axes}</div>
+      <button class="bottle-btn" onclick="openBottleShare()" aria-label="分享漂流瓶" title="分享香气人格报告">
+        <span class="bottle-btn-ico">🍾</span> 漂流瓶 · 分享香气人格报告
+      </button>
+    </div>
+  </div>`;
+}
+
+function recordDimensions(rx) {
+  const user  = (rx.request && rx.request.user) || {};
+  const scene = user.scene;
+  const emotions = user.emotions || [];
+  const top = (rx.recommendedFragrances||[])[0];
+  const topFam = top && top.family;
+  const ed = rx.energyDeviation || {};
+
+  let sceneDim;
+  if (E_SCENES.includes(scene))       sceneDim = { icon:'🌆', title:'场景 · 外放', text:'走向人群 · '+(SCENE_LABEL[scene]||scene) };
+  else if (I_SCENES.includes(scene))  sceneDim = { icon:'🕯️', title:'场景 · 内敛', text:'回归自身 · '+(SCENE_LABEL[scene]||scene) };
+  else sceneDim = ((ed.emotionEnergy||0) < (ed.environmentEnergy||0))
+    ? { icon:'🕯️', title:'能量 · 内敛', text:'情绪能量低于环境压力' }
+    : { icon:'🌆', title:'能量 · 外放', text:'情绪能量高于环境压力' };
+
+  const fCnt = emotions.filter(e=>FEEL_EMOTIONS.includes(e)).length;
+  const sCnt = emotions.filter(e=>STATE_EMOTIONS.includes(e)).length;
+  const emoText = emotions.map(e=>EMOTION_LABEL[e]||e).join('、') || '—';
+  const emotionDim = (fCnt >= sCnt)
+    ? { icon:'💗', title:'情绪 · 感性', text:'情绪驱动选香 · '+emoText }
+    : { icon:'⚖️', title:'情绪 · 理性', text:'状态导向选香 · '+emoText };
+
+  const scentDim = S_FAMILIES.includes(topFam)
+    ? { icon:'🌿', title:'香型 · 具象', text:(FAMILY_LABEL[topFam]||topFam||'—')+' · 自然可辨的气息' }
+    : { icon:'🌀', title:'香型 · 抽象', text:(FAMILY_LABEL[topFam]||topFam||'—')+' · 复杂层叠的结构' };
+
+  return [sceneDim, emotionDim, scentDim];
+}
+
+// ─────────────────────────────────────────────────────────────
+// Mock 数据（仿真 localStorage 内容）
+// ─────────────────────────────────────────────────────────────
+const MOCK_PRESCRIPTIONS = [
+  {
+    id: 'rx-1724400000000-a1b2c3',
+    createdAt: '2025-08-23T14:32:00.000Z',
+    request: {
+      environment: { city:'广州', temperature:33, humidity:82, weather:'rainy', lat:23.13, lng:113.26 },
+      user: { emotions:['anxious','irritated'], scene:'deep_work', freeText:'' }
+    },
+    energyDeviation: {
+      score: 78, environmentEnergy: 68, emotionEnergy: 22, sceneEnergy: 60,
+      hasConflict: true,
+      conflictDescription: '高温高湿天气与深度工作需求形成明显张力，情绪能量偏低建议补充清凉调性香氛。'
+    },
+    recommendedFragrances: [
+      {
+        id:'prada-paradoxe', brand:'Prada', name:'Prada Paradoxe', collection:'Paradoxe',
+        family:'floral',
+        notes:{ top:['Neroli','Bergamot'], heart:['Jasmine Sambac','Magnolia'], base:['Vanilla','White Musk','Ambrette'] },
+        story:'矛盾之美，在流动与永恒之间找到平衡。',
+        imageUrl:'/fragrances/prada-paradoxe.jpg', purchaseUrl:'/buy/prada-paradoxe'
+      },
+      {
+        id:'prada-luna-rossa', brand:'Prada', name:'Luna Rossa Ocean', collection:'Luna Rossa',
+        family:'fresh',
+        notes:{ top:['Iris','Petitgrain'], heart:['Sage','Ambrette'], base:['Vetiver','White Musk'] },
+        story:'深蓝海洋的自由气息，一片辽阔。',
+        imageUrl:'/fragrances/luna-rossa-ocean.jpg', purchaseUrl:'/buy/luna-rossa-ocean'
+      },
+      {
+        id:'prada-infusion-diris', brand:'Prada', name:"L'Homme Prada", collection:"L'Homme",
+        family:'aromatic',
+        notes:{ top:['Geranium','Bergamot'], heart:['Iris Root','Neroli'], base:['Vetiver','Patchouli'] },
+        story:'将当代男士的矛盾与精致凝聚于一瓶。',
+        imageUrl:'/fragrances/lhomme.jpg', purchaseUrl:'/buy/lhomme-prada'
+      }
+    ],
+    healingNarrative: {
+      todayStatus: '今天广州的空气像是被蒸汽泡过，33℃的热度让人的思绪也变得粘稠。你想专注，却发现焦虑像一只无形的手在拉扯。这份处方是给此刻的你——先让香气帮你找回呼吸的节奏。',
+      scentCombination: 'Paradoxe 的柑橘前调与茉莉中调层叠展开，用花香的柔软化解燥热，后段香草定锚情绪，帮助你从慌乱重新回到当下。',
+      usageGuide: '建议喷于手腕内侧与颈侧，手腕轻触鼻尖三次做深呼吸。专注工作前先闻五秒，让香气成为进入心流的仪式感开关。',
+      meditationGuide: '闭上眼睛，想象自己站在一片雨后的花园里。空气是湿的，但不沉重，每朵花都在安静地呼吸。你的呼吸随着茉莉的气味慢慢放缓，焦虑像水从指缝流走……',
+      emotionalGuidance: '焦虑不是敌人，它是你在意的证明。把这份在意换个方向，变成专注的燃料——香气已经先帮你铺好了路。',
+      commercialCTA: { label:'探索 Prada Paradoxe', fragranceId:'prada-paradoxe', type:'buy_trial' }
+    },
+    triMapping: {
+      environment: { label:'广州 33℃ 🌧️', energy:68, factors:['温度33℃','湿度82%','阴雨天气'] },
+      emotion:     { label:'焦虑·烦躁', energy:22, factors:['焦虑 😰','烦躁 😤'] },
+      fragrance:   { label:'Prada Paradoxe', energy:35, factors:['花香调','前调: Neroli, Bergamot','基调: Vanilla, White Musk'] }
+    }
+  },
+  {
+    id: 'rx-1724140800000-d4e5f6',
+    createdAt: '2025-08-20T08:15:00.000Z',
+    request: {
+      environment: { city:'上海', temperature:27, humidity:65, weather:'cloudy', lat:31.23, lng:121.47 },
+      user: { emotions:['calm','tired'], scene:'commute_subway', freeText:'' }
+    },
+    energyDeviation: {
+      score: 42, environmentEnergy: 55, emotionEnergy: 45, sceneEnergy: 50,
+      hasConflict: false,
+      conflictDescription: ''
+    },
+    recommendedFragrances: [
+      {
+        id:'prada-candy', brand:'Prada', name:'Prada Candy', collection:'Candy',
+        family:'oriental',
+        notes:{ top:['Benzoin'], heart:['Caramel','Musks'], base:['White Musk','Labdanum'] },
+        story:'如糖果般温柔，甜蜜而不腻，是一份送给自己的礼物。',
+        imageUrl:'/fragrances/prada-candy.jpg', purchaseUrl:'/buy/prada-candy'
+      },
+      {
+        id:'prada-amber-pour-homme', brand:'Prada', name:'Amber Pour Homme', collection:'Amber',
+        family:'aromatic',
+        notes:{ top:['Bergamot','Neroli'], heart:['Patchouli','Labdanum'], base:['Amber','Benzoin','Vetiver'] },
+        story:'东方琥珀的温暖底蕴，在都市节奏里找到从容。',
+        imageUrl:'/fragrances/amber-pour-homme.jpg', purchaseUrl:'/buy/amber-pour-homme'
+      },
+      {
+        id:'prada-les-infusions-iris', brand:'Prada', name:'Les Infusions Iris', collection:'Les Infusions',
+        family:'floral',
+        notes:{ top:['Iris','Violet'], heart:['Powdery Notes'], base:['Benzoin','Vetiver'] },
+        story:'清晨鸢尾的静谧，如一口缓缓呼出的气。',
+        imageUrl:'/fragrances/infusions-iris.jpg', purchaseUrl:'/buy/infusions-iris'
+      }
+    ],
+    healingNarrative: {
+      todayStatus: '27℃的上海微阴，地铁里的人群熟悉而陌生。你平静，但也累了——不是那种睡一觉就好的累，是灵魂需要放空的累。这份香气像一首安静的歌，陪你坐到站。',
+      scentCombination: '东方调的琥珀蜜感在低温车厢里缓缓释放，给疲惫的神经一个温柔的包裹，全程无侵略感，只是陪伴。',
+      usageGuide: '可在出门前喷于外套内衬，香气随体温释放，全程隐约可感。在拥挤车厢里成为你专属的安静气泡。',
+      meditationGuide: '深吸一口气，闻到琥珀的甜，它说：不必加速，你已经够努力了。慢慢呼出，身体沉下去，像一块石头落进温水里……',
+      emotionalGuidance: '疲惫的时候，不必假装精力充沛。承认累，是对自己最诚实的善意。',
+      commercialCTA: { label:'探索 Prada Candy', fragranceId:'prada-candy', type:'buy_full' }
+    },
+    triMapping: {
+      environment: { label:'上海 27℃ ⛅', energy:55, factors:['温度27℃','湿度65%','多云天气'] },
+      emotion:     { label:'平静·疲惫', energy:45, factors:['平静 😌','疲惫 😴'] },
+      fragrance:   { label:'Prada Candy', energy:52, factors:['东方调','前调: Benzoin','基调: White Musk, Labdanum'] }
+    }
+  },
+  {
+    id: 'rx-1723968000000-g7h8i9',
+    createdAt: '2025-08-18T20:44:00.000Z',
+    request: {
+      environment: { city:'北京', temperature:22, humidity:40, weather:'sunny', lat:39.91, lng:116.39 },
+      user: { emotions:['happy','energetic'], scene:'social_boost', freeText:'' }
+    },
+    energyDeviation: {
+      score: 18, environmentEnergy: 72, emotionEnergy: 80, sceneEnergy: 75,
+      hasConflict: false,
+      conflictDescription: ''
+    },
+    recommendedFragrances: [
+      {
+        id:'prada-infusion-mandarine', brand:'Prada', name:'Infusion de Mandarine', collection:'Infusions',
+        family:'citrus',
+        notes:{ top:['Mandarine','Bigarade'], heart:['Orange Blossom'], base:['Benzyl Benzoate','Incense'] },
+        story:'一枚阳光下刚摘的橘，清新得像一句脱口而出的笑声。',
+        imageUrl:'/fragrances/infusion-mandarine.jpg', purchaseUrl:'/buy/infusion-mandarine'
+      },
+      {
+        id:'prada-paradoxe', brand:'Prada', name:'Prada Paradoxe', collection:'Paradoxe',
+        family:'floral',
+        notes:{ top:['Neroli','Bergamot'], heart:['Jasmine Sambac','Magnolia'], base:['Vanilla','White Musk','Ambrette'] },
+        story:'矛盾之美，在流动与永恒之间找到平衡。',
+        imageUrl:'/fragrances/prada-paradoxe.jpg', purchaseUrl:'/buy/prada-paradoxe'
+      },
+      {
+        id:'prada-luna-rossa', brand:'Prada', name:'Luna Rossa Ocean', collection:'Luna Rossa',
+        family:'fresh',
+        notes:{ top:['Iris','Petitgrain'], heart:['Sage','Ambrette'], base:['Vetiver','White Musk'] },
+        story:'深蓝海洋的自由气息，一片辽阔。',
+        imageUrl:'/fragrances/luna-rossa-ocean.jpg', purchaseUrl:'/buy/luna-rossa-ocean'
+      }
+    ],
+    healingNarrative: {
+      todayStatus: '今晚北京秋高气爽，22℃是最适合社交的温度。你心情很好，像一颗充满电的手机，准备好去发光了。让这瓶柑橘调做你今晚的序曲。',
+      scentCombination: '橘皮与橙花的双重柑橘，明亮清爽不抢镜，是会场里最好闻的那个人，又不咄咄逼人。',
+      usageGuide: '出门前喷于衬衫领口两侧，保持社交安全距离内若有若无的清新感。',
+      meditationGuide: '今晚的你不需要冥想，你已经是一束光了。把好的气场带给你遇见的每一个人。',
+      emotionalGuidance: '好的状态是可以传染的。今晚你遇见的人，也会因为你的好心情更快乐一点。',
+      commercialCTA: { label:'探索 Infusion de Mandarine', fragranceId:'prada-infusion-mandarine', type:'buy_trial' }
+    },
+    triMapping: {
+      environment: { label:'北京 22℃ ☀️', energy:72, factors:['温度22℃','湿度40%','晴朗天气'] },
+      emotion:     { label:'开心·兴奋', energy:80, factors:['开心 😊','兴奋 ⚡'] },
+      fragrance:   { label:'Infusion de Mandarine', energy:76, factors:['柑橘调','前调: Mandarine, Bigarade','中调: Orange Blossom'] }
+    }
+  }
+];
+
+// ─────────────────────────────────────────────────────────────
+// 工具函数
+// ─────────────────────────────────────────────────────────────
+function loadPrescriptions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const list = Array.isArray(parsed) ? parsed : [parsed];
+    return list.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  } catch { return null; }
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function fmtFull(iso) {
+  return new Date(iso).toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+}
+function truncate(str, n=55) { return str.length>n ? str.slice(0,n)+'…' : str; }
+
+function topFamilies(list) {
+  const t={};
+  list.forEach(rx => rx.recommendedFragrances.forEach(f => { t[f.family]=(t[f.family]||0)+1; }));
+  return Object.entries(t).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([family,count])=>({family,count}));
+}
+function topEmotions(list) {
+  const t={};
+  list.forEach(rx => rx.request.user.emotions.forEach(e => { t[e]=(t[e]||0)+1; }));
+  return Object.entries(t).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([emotion,count])=>({emotion,count}));
+}
+function dateStr(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtDateShort(ds) {
+  const [,mo,d] = ds.split('-').map(Number);
+  return `${mo}月${d}日`;
+}
+function clamp(v,min,max) { return Math.max(min, Math.min(max, v)); }
+function lighten(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(255 - (255 - ((n>>16)&255)) * amt);
+  const g = Math.round(255 - (255 - ((n>>8)&255)) * amt);
+  const b = Math.round(255 - (255 - (n&255)) * amt);
+  return `rgb(${r},${g},${b})`;
+}
+
+// 气味 → 情绪/场景分类（自然 / 快乐 / 活力 / 旅行）
+function scentCategoryTags(frag) {
+  if (!frag) return ['happy'];
+  const db = pradaLookup(frag);
+  const scenes  = (db ? db.scenes : null) || frag.scenes || [];
+  const emos    = (db ? db.suitableEmotions : null) || frag.suitableEmotions || [];
+  const effects = (db ? db.effects : null) || frag.effects || [];
+  const fam     = (frag.family||'').toLowerCase();
+  const cats = [];
+  if (['woody','fresh','aromatic','fougere','chypre'].includes(fam) || scenes.includes('outdoor_park') || effects.some(e=>['grounding','calming'].includes(e))) cats.push('nature');
+  if (['floral','citrus'].includes(fam) || emos.some(e=>['happy','romantic','calm'].includes(e))) cats.push('happy');
+  if (emos.includes('energetic') || effects.some(e=>['energizing','refreshing','uplifting','confidence'].includes(e))) cats.push('energy');
+  if (scenes.some(s=>['commute_subway','outdoor_park','social_boost'].includes(s))) cats.push('travel');
+  return cats.length ? cats : ['happy'];
+}
+
+// ─────────────────────────────────────────────────────────────
+// HTML 生成
+// ─────────────────────────────────────────────────────────────
+function renderStatsPanel(list) {
+  const families = topFamilies(list);
+  const emotions = topEmotions(list);
+  const famSet = new Set();
+  const fragSet = new Set();
+  list.forEach(rx => (rx.recommendedFragrances||[]).forEach(f => { famSet.add(f.family); fragSet.add(f.name||f.id); }));
+  const dayCount = new Set(list.map(rx => dateStr(rx.createdAt))).size;
+
+  const famRows = families.map(({family,count}) =>
+    `<div class="dot-row">
+      <span class="dot" style="background:${FAMILY_COLOR[family]}"></span>
+      <span class="dot-label">${FAMILY_LABEL[family]||family}</span>
+      <span class="dot-count">×${count}</span>
+    </div>`).join('');
+
+  const emoRows = emotions.map(({emotion,count}) =>
+    `<div class="dot-row">
+      <span class="dot-label">${EMOTION_EMOJI[emotion]||''} ${EMOTION_LABEL[emotion]||emotion}</span>
+      <span class="dot-count">×${count}</span>
+    </div>`).join('');
+
+  return `
+  <div class="stats-panel">
+    <p class="panel-label">香气人格概览 · ${list.length} 次记录</p>
+    ${renderPersonality(list)}
+    <div class="stats-grid">
+      <div class="stat-item">
+        <p class="stat-sublabel">偏好香调</p>
+        ${famRows}
+      </div>
+      <div class="stat-item">
+        <p class="stat-sublabel">常见情绪</p>
+        ${emoRows}
+      </div>
+      <div class="stat-item">
+        <p class="stat-sublabel">探索广度</p>
+        <div><span class="big-num">${famSet.size}</span><span class="big-unit">种香调</span></div>
+        <div class="dot-label">${fragSet.size} 款香氛 · ${dayCount} 天记录</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEmotionTrend(records) {
+  const sorted = [...records].filter(rx => rx.energyDeviation)
+    .sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+  if (sorted.length < 2) return '';
+  const w = 620, h = 160, padL = 36, padR = 18, padT = 24, padB = 30;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  const X = i => padL + (i * (iw / (sorted.length - 1)));
+  const Y = v => padT + ih * (1 - v / 100);
+
+  const pts = sorted.map((rx, i) => {
+    const v = Math.max(0, Math.min(100, rx.energyDeviation.emotionEnergy || 0));
+    return { x: X(i), y: Y(v), v, rx };
+  });
+
+  const line = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const area = `M${pts[0].x.toFixed(1)},${(padT+ih).toFixed(1)} L${pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} L${pts[pts.length-1].x.toFixed(1)},${(padT+ih).toFixed(1)} Z`;
+
+  const grid = [25, 50, 75].map(v => {
+    const gy = Y(v);
+    return `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${w-padR}" y2="${gy.toFixed(1)}" stroke="rgba(13,13,13,0.07)" stroke-width="1"/>`;
+  }).join('');
+  const yticks = [0, 25, 50, 75, 100].map(v => {
+    const gy = Y(v);
+    return `<text x="${padL-7}" y="${(gy+2).toFixed(1)}" text-anchor="end" font-size="7" fill="rgba(13,13,13,0.35)">${v}</text>`;
+  }).join('');
+  const xlabels = pts.map(p => {
+    const d = new Date(p.rx.createdAt);
+    return `<text x="${p.x.toFixed(1)}" y="${h-8}" text-anchor="middle" font-size="7" fill="rgba(13,13,13,0.4)">${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}</text>`;
+  }).join('');
+  const markers = pts.map(p => {
+    const emos = (p.rx.request && p.rx.request.user && p.rx.request.user.emotions) || [];
+    const emo = emos[0];
+    const emoji = EMOTION_EMOJI[emo] || '';
+    const emoLabel = EMOTION_LABEL[emo] || '';
+    const d = new Date(p.rx.createdAt);
+    const dateTxt = `${d.getMonth()+1}月${d.getDate()}日 周${'日一二三四五六'[d.getDay()]}`;
+    const tipHtml = `${dateTxt}\n情绪：${emoLabel||'—'} ${emoji}\n情绪能量：${p.v} / 100`;
+    return `<g>
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#0D0D0D"/>
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" fill="none" stroke="#F7F6F2" stroke-width="2"/>
+      <text x="${p.x.toFixed(1)}" y="${(p.y-13).toFixed(1)}" text-anchor="middle" font-size="14">${emoji}</text>
+      <text x="${p.x.toFixed(1)}" y="${(p.y+22).toFixed(1)}" text-anchor="middle" font-size="7" fill="rgba(13,13,13,0.5)">${emoLabel}</text>
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="18" fill="transparent" style="cursor:pointer"
+        onmousemove="showTip(event, this)" onmouseleave="hideTip()" data-tip="${tipHtml}"/>
+    </g>`;
+  }).join('');
+
+  return `<div class="trend-section">
+    <div class="trend-head">
+      <span class="filter-label">情绪趋势</span>
+      <span class="trend-note">情绪能量随记录流动 · 由远及近</span>
+    </div>
+    <svg viewBox="0 0 ${w} ${h}" class="trend-svg" preserveAspectRatio="xMidYMid meet">
+      ${grid}${yticks}
+      <path d="${area}" fill="rgba(13,13,13,0.06)"/>
+      <polyline points="${line}" fill="none" stroke="#0D0D0D" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${xlabels}${markers}
+    </svg>
+    <div class="trend-hint">悬停数据点查看详情</div>
+    <div id="trend-tip"></div>
+  </div>`;
+}
+
+function renderFilterBar(usedFamilies, active) {
+  const allBtn = `<button class="filter-btn${active==='all'?' active':''}" onclick="setFilter('all')">全部</button>`;
+  const famBtns = usedFamilies.map(fam => {
+    const isActive = active===fam;
+    const c = FAMILY_COLOR[fam]||'#888';
+    const style = isActive
+      ? `border-color:${c};background:${c}18;color:${c}`
+      : `border-color:rgba(13,13,13,0.12);color:rgba(13,13,13,0.5)`;
+    return `<button class="filter-btn" style="${style}" onclick="setFilter('${fam}')">${FAMILY_LABEL[fam]}</button>`;
+  }).join('');
+  const chip = currentDate
+    ? `<span class="date-chip">📅 ${fmtDateShort(currentDate)} <button onclick="setDate(null)" aria-label="清除日期筛选">×</button></span>`
+    : '';
+  return `<div class="filter-bar">
+    <span class="filter-label">香调筛选</span>
+    ${allBtn}${famBtns}
+    ${chip}
+  </div>`;
+}
+
+function renderCard(rx, index) {
+  const top = rx.recommendedFragrances[0];
+  const wEmoji = WEATHER_EMOJI[rx.request.environment.weather]||'🌤';
+  const fColor = FAMILY_COLOR[top?.family]||'#888';
+  const cardId = `card-${rx.id}`;
+
+  const emotions = rx.request.user.emotions.map(e =>
+    `<span class="emotion-tag">${EMOTION_EMOJI[e]||''} ${EMOTION_LABEL[e]||e}</span>`
+  ).join('');
+
+  const dims = recordDimensions(rx).map(d =>
+    `<div class="dim-cell">
+      <span class="dim-badge">${d.icon}</span>
+      <div class="dim-body">
+        <span class="dim-title">${d.title}</span>
+        <span class="dim-text">${d.text}</span>
+      </div>
+    </div>`
+  ).join('');
+
+  const conflictBar = rx.energyDeviation.hasConflict && rx.energyDeviation.conflictDescription
+    ? `<div class="conflict-bar">⚡ ${rx.energyDeviation.conflictDescription}</div>`
+    : '';
+
+  const triItems = [
+    {label:'环境', icon: wEmoji, data: rx.triMapping.environment},
+    {label:'情绪', icon:'💫', data: rx.triMapping.emotion},
+    {label:'香氛', icon:'🌿', data: rx.triMapping.fragrance},
+  ].map(({label,icon,data}) =>
+    `<div class="tri-cell">
+      <div class="tri-cell-icon">${icon} ${label}</div>
+      <div class="tri-cell-label">${data.label}</div>
+      <div class="tri-cell-factors">${data.factors.slice(0,3).join(' · ')}</div>
+    </div>`
+  ).join('');
+
+  const frags = rx.recommendedFragrances.map((f,i) =>
+    `<div class="frag-row">
+      ${fragImage(f) ? `<div class="frag-thumb"><img src="${fragImage(f)}" alt="${fragName(f)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
+      <span class="frag-rank">0${i+1}</span>
+      <div class="frag-info">
+        <div class="frag-name">${fragName(f)}</div>
+        <div class="frag-sub">${FAMILY_LABEL[f.family]||f.family} · 前调: ${(f.notes?.top||[]).slice(0,2).join(', ')}</div>
+        ${f.story ? `<div class="frag-story">${f.story}</div>` : ''}
+      </div>
+      <a href="${f.purchaseUrl}" target="_blank" class="frag-btn">探索</a>
+    </div>`
+  ).join('');
+
+  const ctaFrag = rx.recommendedFragrances.find(f=>f.id===rx.healingNarrative.commercialCTA.fragranceId)
+    || rx.recommendedFragrances[0];
+
+  return `
+  <article class="rx-card">
+    <button class="rx-head" onclick="toggleCard('${cardId}')" aria-expanded="false" id="btn-${cardId}">
+      <div class="rx-date">
+        <span class="rx-index">#${String(index+1).padStart(2,'0')}</span>
+        <span class="rx-day">${fmtDate(rx.createdAt)}</span>
+        <span class="rx-time">${fmtTime(rx.createdAt)}</span>
+      </div>
+      <div class="rx-mid">
+        <div class="rx-meta">
+          <span class="rx-location">${wEmoji} ${rx.request.environment.city} ${rx.request.environment.temperature}℃</span>
+          <span class="rx-scene">${SCENE_LABEL[rx.request.user.scene]||rx.request.user.scene}</span>
+        </div>
+        <div class="rx-emotions">${emotions}</div>
+        <p class="rx-excerpt">${truncate(rx.healingNarrative.todayStatus)}</p>
+      </div>
+      <div class="rx-right">
+        ${top ? `<span class="family-tag" style="background:${fColor}22;color:${fColor};border-color:${fColor}44">${FAMILY_LABEL[top.family]||top.family}</span>` : ''}
+        ${top ? `<span class="rx-fragname">${fragName(top)}</span>` : ''}
+        ${rx.energyDeviation.hasConflict ? `<span class="conflict-badge">⚡ 冲突</span>` : ''}
+        <span class="chevron" id="chev-${cardId}">▾</span>
+      </div>
+    </button>
+
+    <div class="rx-detail" id="${cardId}">
+      <p class="rx-detail-full-date">${fmtFull(rx.createdAt)}</p>
+
+      <p class="tri-title">本日人格线索</p>
+      <div class="dim-row">${dims}</div>
+
+      ${conflictBar}
+
+      <p class="tri-title">三元映射</p>
+      <div class="tri-grid">${triItems}</div>
+
+      <div class="narrative-block">
+        <p class="block-label">今日状态</p>
+        <p class="block-text">${rx.healingNarrative.todayStatus}</p>
+      </div>
+
+      <div class="narrative-block">
+        <p class="block-label">情绪寄语</p>
+        <p class="block-text">${rx.healingNarrative.emotionalGuidance}</p>
+      </div>
+
+      <div class="narrative-block" style="padding-bottom:6px">
+        <p class="block-label">推荐香氛</p>
+      </div>
+      <div class="frag-list">${frags}</div>
+
+      <div class="twin-grid">
+        <div>
+          <p class="block-label" style="padding:0 0 6px">使用建议</p>
+          <p class="block-text small">${rx.healingNarrative.usageGuide}</p>
+        </div>
+        <div>
+          <p class="block-label" style="padding:0 0 6px">香气组合</p>
+          <p class="block-text small">${rx.healingNarrative.scentCombination}</p>
+        </div>
+      </div>
+
+      <div class="narrative-block">
+        <p class="block-label">冥想引导</p>
+        <p class="block-text">${rx.healingNarrative.meditationGuide}</p>
+      </div>
+
+      <div class="cta-row">
+        <a href="${ctaFrag.purchaseUrl}" target="_blank" class="cta-btn">${rx.healingNarrative.commercialCTA.label}</a>
+        <span class="cta-type">${CTA_TYPE_LABEL[rx.healingNarrative.commercialCTA.type]||''}</span>
+      </div>
+    </div>
+  </article>`;
+}
+
+function renderEmpty() {
+  return `
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 0;text-align:center;">
+    <div style="width:64px;height:64px;border-radius:50%;border:1px solid rgba(13,13,13,0.08);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:24px;">🌿</div>
+    <h2 style="font-family:Georgia,serif;font-size:15px;margin-bottom:10px;color:#0D0D0D;">香气日记尚为空白</h2>
+    <p style="font-size:11px;line-height:1.6;color:rgba(13,13,13,0.45);max-width:240px;">
+      每次获得专属处方后，<br>它会自动保存在这里，成为你的情绪资产。
+    </p>
+    <a href="/" style="margin-top:32px;display:inline-block;padding:12px 32px;font-size:9px;text-transform:uppercase;letter-spacing:.15em;background:#0D0D0D;color:#F7F6F2;">
+      开始第一次处方
+    </a>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 香气地图（替代原星球日历）
+// ─────────────────────────────────────────────────────────────
+function scentMapRecords() {
+  let recs = allPrescriptions;
+  if (mapTodayMode) {
+    const day = currentDate || (allPrescriptions[0] ? dateStr(allPrescriptions[0].createdAt) : null);
+    recs = recs.filter(rx => day && dateStr(rx.createdAt) === day);
+  }
+  if (mapCategory !== 'all') {
+    recs = recs.filter(rx => (rx.recommendedFragrances||[]).some(f => scentCategoryTags(f).includes(mapCategory)));
+  }
+  return recs;
+}
+
+function mapNodes(records) {
+  const map = new Map();
+  records.forEach(rx => (rx.recommendedFragrances||[]).forEach(f => {
+    const id = f.id || f.name;
+    if (!map.has(id)) map.set(id, { id, frag:f, count:0, days:new Set() });
+    const n = map.get(id);
+    n.count++;
+    n.days.add(dateStr(rx.createdAt));
+  }));
+  return [...map.values()];
+}
+
+function mapLinks(nodes, records) {
+  const pair = new Map();
+  records.forEach(rx => {
+    const ids = (rx.recommendedFragrances||[]).map(f => f.id || f.name);
+    for (let i=0;i<ids.length;i++) for (let j=i+1;j<ids.length;j++) {
+      const key = [ids[i], ids[j]].sort().join('::');
+      pair.set(key, (pair.get(key)||0)+1);
+    }
+  });
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const links = [];
+  pair.forEach((w, key) => {
+    const [a, b] = key.split('::');
+    if (byId.has(a) && byId.has(b)) links.push({ a:byId.get(a), b:byId.get(b), w });
+  });
+  return links;
+}
+
+// 力导向布局：位置代表香气之间的关联 / 距离
+function layoutMap(nodes, links) {
+  if (!nodes.length) return;
+  nodes.forEach((n, i) => {
+    const ang = i * 2.399963;
+    const rad = 150 + (i % 4) * 26;
+    n.x = MAP_W/2 + Math.cos(ang) * rad;
+    n.y = MAP_H/2 + Math.sin(ang) * rad;
+    n.vx = 0; n.vy = 0;
+  });
+  for (let it=0; it<160; it++) {
+    for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++) {
+      const a = nodes[i], b = nodes[j];
+      let dx = a.x - b.x, dy = a.y - b.y;
+      let d2 = dx*dx + dy*dy;
+      if (d2 < 1) { d2 = 1; dx = (i%2?1:-1)*0.6; dy = (j%2?1:-1)*0.6; }
+      const d = Math.sqrt(d2);
+      const f = 12000 / d2;
+      const fx = dx/d*f, fy = dy/d*f;
+      a.vx += fx; a.vy += fy;
+      b.vx -= fx; b.vy -= fy;
+    }
+    links.forEach(l => {
+      const dx = l.b.x - l.a.x, dy = l.b.y - l.a.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const target = 150 - l.w * 26;
+      const f = (d - target) * 0.015;
+      const fx = dx/d*f, fy = dy/d*f;
+      l.a.vx += fx; l.a.vy += fy;
+      l.b.vx -= fx; l.b.vy -= fy;
+    });
+    nodes.forEach(n => {
+      n.vx += (MAP_W/2 - n.x) * 0.001;
+      n.vy += (MAP_H/2 - n.y) * 0.001;
+      n.x += n.vx; n.y += n.vy;
+      n.vx = clamp(n.vx, -3, 3); n.vy = clamp(n.vy, -3, 3);
+      n.vx *= 0.85; n.vy *= 0.85;
+    });
+  }
+  nodes.forEach(n => {
+    n.x = clamp(n.x, 70, MAP_W-70);
+    n.y = clamp(n.y, 70, MAP_H-70);
+  });
+}
+
+function renderScentMap() {
+  const recs = scentMapRecords();
+  const nodes = mapNodes(recs);
+  const links = mapLinks(nodes, recs);
+  layoutMap(nodes, links);
+
+  const day = currentDate || (allPrescriptions[0] ? dateStr(allPrescriptions[0].createdAt) : null);
+
+  const CAT_GRAD = {
+    all:    'linear-gradient(135deg,#1a1a1a,#3a3a3a)',
+    nature: 'linear-gradient(135deg,#6AB87A,#3A7A5E)',
+    happy:  'linear-gradient(135deg,#F4A8C0,#C46A82)',
+    energy: 'linear-gradient(135deg,#F0D470,#D9A42E)',
+    travel: 'linear-gradient(135deg,#6EC8CC,#3A8F96)',
+  };
+  const chips = ['all', ...Object.keys(SCENT_CATEGORIES)].map(c => {
+    const isActive = mapCategory === c;
+    const meta = c==='all' ? { label:'全部', color:'#0D0D0D', emoji:'' } : SCENT_CATEGORIES[c];
+    const activeStyle = isActive ? `background:${CAT_GRAD[c]||meta.color};color:#fff;border-color:transparent` : '';
+    return `<button class="cat-chip${isActive?' active':''}" style="${activeStyle}" onclick="setMapCategory('${c}')">${meta.emoji} ${meta.label}</button>`;
+  }).join('');
+
+  const nodeHtml = nodes.map(n => {
+    const name = fragName(n.frag);
+    const fam = n.frag.family;
+    const col = FAMILY_COLOR[fam] || '#8A8A8A';
+    const c1 = lighten(col, 0.55); /* 更亮的高光色，让渐变更通透 */
+    const cats = scentCategoryTags(n.frag);
+    const tooltip = `${name}\n${FAMILY_LABEL[fam]||fam} · 收藏 ${n.count} 次\n${cats.map(c=>SCENT_CATEGORIES[c].emoji+SCENT_CATEGORIES[c].label).join(' / ')}`;
+    const catEmoji = cats.length ? SCENT_CATEGORIES[cats[0]].emoji : '';
+    return `<div class="map-node" style="left:${n.x.toFixed(1)}px;top:${n.y.toFixed(1)}px;--c1:${c1};--c2:${col}" role="button" tabindex="0"
+      onclick="openScent('${n.id}')"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openScent('${n.id}')}"
+      onmousemove="mapTip(event, this)" onmouseleave="mapTipHide()" data-tip="${tooltip}">
+      <span class="map-node-ring"></span>
+      <span class="map-node-orb"><span class="map-node-core"></span></span>
+      ${catEmoji ? `<span class="map-node-badge">${catEmoji}</span>` : ''}
+      <span class="map-node-name">${shortFragName(name)}</span>
+      <span class="map-node-count">×${n.count}</span>
+    </div>`;
+  }).join('');
+
+  const linkSvg = links.map(l =>
+    `<line x1="${l.a.x.toFixed(1)}" y1="${l.a.y.toFixed(1)}" x2="${l.b.x.toFixed(1)}" y2="${l.b.y.toFixed(1)}" stroke="rgba(13,13,13,0.13)" stroke-width="${Math.min(2, 0.6+l.w).toFixed(1)}" stroke-dasharray="2 5"/>`
+  ).join('');
+
+  const famsInMap = [...new Set(nodes.map(n => n.frag.family).filter(Boolean))];
+  const legend = famsInMap.map(f =>
+    `<span class="map-lg"><i style="background:${FAMILY_COLOR[f]||'#888'}"></i>${FAMILY_LABEL[f]||f}</span>`
+  ).join('');
+
+  const todayTag = mapTodayMode
+    ? `<span class="map-today-tag">✨ ${fmtDateShort(day)} 收集 ${nodes.length} 款香气</span>`
+    : `<button class="map-hint-btn" onclick="activateMap()">点顶部头像 · 看今日收集</button>`;
+
+  return `
+  <section class="map-section">
+    <div class="map-head">
+      <span class="filter-label">香气地图</span>
+      ${todayTag}
+    </div>
+    <div class="map-cats">${chips}</div>
+    <div class="map-viewport" id="map-viewport">
+      <div class="map-world" id="map-world">
+        <svg class="map-links" width="${MAP_W}" height="${MAP_H}" aria-hidden="true">${linkSvg}</svg>
+        ${nodeHtml}
+      </div>
+      <div class="map-zoom">
+        <button data-zoom="in" aria-label="放大">＋</button>
+        <button data-zoom="out" aria-label="缩小">－</button>
+      </div>
+      <p class="map-hint">拖拽平移 · 滚轮缩放</p>
+      ${nodes.length===0 ? `<div class="map-empty">这一天还没有收集香气</div>` : ''}
+    </div>
+    <div class="map-foot">
+      <div class="map-legend">${legend}</div>
+      <p class="map-footnote">每次获得 Prada 处方，香气都会被收藏进这张地图</p>
+    </div>
+  </section>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 状态 & 渲染
+// ─────────────────────────────────────────────────────────────
+let allPrescriptions = [];
+let currentFilter = 'all';
+let currentDate = null;
+let mapTodayMode = false;
+let mapCategory = 'all';
+let mapView = { scale:1, tx:0, ty:0 };
+let mapTouched = false;
+
+function render() {
+  const app = document.getElementById('app');
+  const countEl = document.getElementById('total-count');
+  countEl.textContent = `${allPrescriptions.length} 条记录`;
+  const avatar = document.getElementById('avatar-btn');
+  if (avatar) avatar.classList.toggle('active', mapTodayMode);
+
+  if (!allPrescriptions.length) {
+    app.innerHTML = renderEmpty();
+    return;
+  }
+
+  const famFiltered = currentFilter === 'all'
+    ? allPrescriptions
+    : allPrescriptions.filter(rx => rx.recommendedFragrances.some(f => f.family===currentFilter));
+
+  const filtered = famFiltered.filter(rx => !currentDate || dateStr(rx.createdAt)===currentDate);
+
+  const usedFamilies = [...new Set(allPrescriptions.flatMap(rx => (rx.recommendedFragrances||[]).map(f=>f.family)))];
+
+  let html = renderStatsPanel(allPrescriptions);
+  html += renderEmotionTrend(allPrescriptions);
+  html += renderScentMap();
+  if (usedFamilies.length > 1 || currentDate) {
+    html += renderFilterBar(usedFamilies, currentFilter);
+  }
+  if (currentFilter !== 'all' || currentDate) {
+    html += `<p class="filter-count">显示 ${filtered.length} / ${allPrescriptions.length} 条记录</p>`;
+  }
+  html += filtered.map((rx,i) => renderCard(rx,i)).join('');
+  html += `<div class="bottom-cta"><a href="/">+ 新建今日处方</a></div>`;
+
+  app.innerHTML = html;
+  bindMapInteractions();
+}
+
+// ── 地图交互 ──
+function applyMapView() {
+  const world = document.getElementById('map-world');
+  if (world) world.style.transform = `translate(${mapView.tx}px, ${mapView.ty}px) scale(${mapView.scale})`;
+}
+
+function zoomAt(factor, cx, cy) {
+  const prev = mapView.scale;
+  const next = clamp(mapView.scale * factor, 0.35, 5);
+  const k = next / prev;
+  mapView.tx = cx - (cx - mapView.tx) * k;
+  mapView.ty = cy - (cy - mapView.ty) * k;
+  mapView.scale = next;
+  applyMapView();
+}
+
+function bindMapInteractions() {
+  const vp = document.getElementById('map-viewport');
+  if (!vp) return;
+  if (!mapTouched) {
+    const r = vp.getBoundingClientRect();
+    mapView.tx = (r.width - MAP_W) / 2;
+    mapView.ty = (r.height - MAP_H) / 2;
+  }
+  applyMapView();
+
+  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  vp.addEventListener('pointerdown', e => {
+    dragging = true; mapTouched = true;
+    sx = e.clientX; sy = e.clientY; ox = mapView.tx; oy = mapView.ty;
+    try { vp.setPointerCapture(e.pointerId); } catch {}
+  });
+  vp.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    mapView.tx = ox + (e.clientX - sx);
+    mapView.ty = oy + (e.clientY - sy);
+    applyMapView();
+  });
+  const endDrag = () => { dragging = false; };
+  vp.addEventListener('pointerup', endDrag);
+  vp.addEventListener('pointercancel', endDrag);
+  vp.addEventListener('wheel', e => {
+    e.preventDefault();
+    mapTouched = true;
+    const r = vp.getBoundingClientRect();
+    zoomAt(e.deltaY < 0 ? 1.12 : 0.88, e.clientX - r.left, e.clientY - r.top);
+  }, { passive:false });
+  vp.querySelectorAll('[data-zoom]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      mapTouched = true;
+      const r = vp.getBoundingClientRect();
+      zoomAt(btn.getAttribute('data-zoom') === 'in' ? 1.3 : 0.75, r.width/2, r.height/2);
+    });
+  });
+}
+
+window.mapTip = function(ev, el) {
+  const tip = document.getElementById('map-tip');
+  if (!tip) return;
+  tip.innerHTML = el.getAttribute('data-tip').replace(/\n/g, '<br>');
+  tip.style.display = 'block';
+  const r = el.getBoundingClientRect();
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = r.left + r.width/2 - tw/2, y = r.top - th - 8;
+  if (y < 8) y = r.bottom + 8;
+  if (x < 8) x = 8;
+  if (x + tw > window.innerWidth - 8) x = window.innerWidth - tw - 8;
+  tip.style.left = x + 'px';
+  tip.style.top = y + 'px';
+};
+window.mapTipHide = function() {
+  const tip = document.getElementById('map-tip');
+  if (tip) tip.style.display = 'none';
+};
+
+window.setFilter = function(fam) {
+  currentFilter = fam;
+  render();
+};
+
+window.setDate = function(ds) {
+  if (currentDate === ds) currentDate = null;
+  else currentDate = ds;
+  render();
+};
+
+window.setMapCategory = function(c) {
+  mapCategory = c;
+  mapTouched = false;
+  render();
+};
+
+window.activateMap = function() {
+  mapTodayMode = !mapTodayMode;
+  mapTouched = false;
+  render();
+  requestAnimationFrame(() => {
+    const vp = document.getElementById('map-viewport');
+    if (!vp) return;
+    vp.scrollIntoView({ behavior:'smooth', block:'center' });
+    vp.classList.remove('map-pulse');
+    void vp.offsetWidth;
+    vp.classList.add('map-pulse');
+    setTimeout(() => vp.classList.remove('map-pulse'), 1400);
+  });
+};
+
+window.showTip = function(ev, el) {
+  const tip = document.getElementById('trend-tip');
+  if (!tip) return;
+  tip.innerHTML = el.getAttribute('data-tip');
+  tip.style.display = 'block';
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY - th - 10;
+  if (x + tw > window.innerWidth - 8) x = ev.clientX - tw - 14;
+  if (y < 8) y = ev.clientY + 16;
+  tip.style.left = x + 'px';
+  tip.style.top = y + 'px';
+};
+
+window.hideTip = function() {
+  const tip = document.getElementById('trend-tip');
+  if (tip) tip.style.display = 'none';
+};
+
+window.toggleCard = function(cardId) {
+  const detail = document.getElementById(cardId);
+  const chev = document.getElementById('chev-'+cardId);
+  const btn = document.getElementById('btn-'+cardId);
+  const isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+  btn.setAttribute('aria-expanded', String(!isOpen));
+};
+
+// ─────────────────────────────────────────────────────────────
+// 气味详情 Bottom Sheet + 播放
+// ─────────────────────────────────────────────────────────────
+const scentAudio = new Audio();
+let scentModalFrag = null;
+let playingId = null;
+
+function findFrag(id) {
+  for (const rx of allPrescriptions) for (const f of rx.recommendedFragrances||[]) {
+    if ((f.id || f.name) === id) return f;
+  }
+  return null;
+}
+
+function scentSheetContent(frag) {
+  const db = pradaLookup(frag);
+  const name = fragName(frag);
+  const img = fragImage(frag);
+  const fam = frag.family;
+  const col = FAMILY_COLOR[fam] || '#888';
+  const cats = scentCategoryTags(frag);
+  const notes = db ? db.notes : (frag.notes || {});
+  const top  = (notes.top||[]).slice(0,4).map(n=>`<span class="note-chip">${n}</span>`).join('');
+  const heart= (notes.heart||[]).slice(0,4).map(n=>`<span class="note-chip">${n}</span>`).join('');
+  const base = (notes.base||[]).slice(0,4).map(n=>`<span class="note-chip">${n}</span>`).join('');
+  const story = db ? db.story : (frag.story || '');
+  const purchaseUrl = db ? db.purchaseUrl : frag.purchaseUrl;
+  const catLabels = cats.map(c=>`<span class="cat-tag" style="color:${SCENT_CATEGORIES[c].color};border-color:${SCENT_CATEGORIES[c].color}55;background:${SCENT_CATEGORIES[c].color}18">${SCENT_CATEGORIES[c].emoji} ${SCENT_CATEGORIES[c].label}</span>`).join('');
+
+  return `
+    <div class="sheet-media" style="--fam:${col}">
+      ${img ? `<img src="${img}" alt="${name}" onerror="this.parentElement.classList.add('no-img')">` : ''}
+      <button class="sheet-play" id="sheet-play-btn" onclick="togglePlay()" aria-label="播放/暂停气味">▶</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-tags">
+        <span class="fam-tag" style="color:${col};border-color:${col}55;background:${col}18">${FAMILY_LABEL[fam]||fam}</span>
+        ${catLabels}
+      </div>
+      <h3 class="sheet-name">${name}</h3>
+      ${db ? `<p class="sheet-coll">${db.collection} · ${db.volatility} 挥发 · ${db.tempRange.min}–${db.tempRange.max}℃</p>` : ''}
+      <div class="sheet-notes">
+        <div><p class="note-label">前调</p><div class="note-row">${top||'—'}</div></div>
+        <div><p class="note-label">中调</p><div class="note-row">${heart||'—'}</div></div>
+        <div><p class="note-label">基调</p><div class="note-row">${base||'—'}</div></div>
+      </div>
+      ${story ? `<p class="sheet-story">${story}</p>` : ''}
+      <div class="sheet-actions">
+        <button class="sheet-cta" onclick="togglePlay()">▶ 播放气味</button>
+        ${purchaseUrl ? `<a class="sheet-buy" href="${purchaseUrl}" target="_blank">Prada 官网探索 →</a>` : ''}
+      </div>
+    </div>`;
+}
+
+window.openScent = function(id) {
+  const frag = findFrag(id);
+  if (!frag) return;
+  scentModalFrag = frag;
+  const sheet = document.getElementById('scent-sheet');
+  const body = document.getElementById('scent-sheet-body');
+  body.innerHTML = scentSheetContent(frag);
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  updatePlayUI();
+};
+
+window.closeScent = function() {
+  const sheet = document.getElementById('scent-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  document.body.style.overflow = '';
+  if (!scentAudio.paused) { scentAudio.pause(); scentAudio.currentTime = 0; }
+  playingId = null;
+};
+
+window.togglePlay = function() {
+  if (!scentModalFrag) return;
+  if (playingId === scentModalFrag.id && !scentAudio.paused) {
+    scentAudio.pause();
+    playingId = null;
+    updatePlayUI();
+    return;
+  }
+  const fam = scentModalFrag.family;
+  scentAudio.src = `/meditation/family_${fam}.mp3`;
+  scentAudio.play().then(() => {
+    playingId = scentModalFrag.id;
+    updatePlayUI();
+  }).catch(() => {
+    // 本地预览下音频可能无法加载，静默降级为"模拟体验"
+    playingId = scentModalFrag.id;
+    updatePlayUI();
+  });
+};
+
+function updatePlayUI() {
+  const btn = document.getElementById('sheet-play-btn');
+  if (!btn) return;
+  const isOn = playingId && scentModalFrag && playingId === scentModalFrag.id && !scentAudio.paused;
+  btn.classList.toggle('playing', isOn);
+  btn.innerHTML = isOn
+    ? '<span class="sheet-eq"><i></i><i></i><i></i><i></i></span>'
+    : '▶';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeScent(); closeBottle(); }
+});
+
+// ─────────────────────────────────────────────────────────────
+// 漂流瓶 · 分享香气人格报告
+// ─────────────────────────────────────────────────────────────
+const BOTTLE_ACTIONS_SEND = `
+  <button class="bottle-action primary" data-action="throw" onclick="throwBottle()">抛入大海</button>
+  <button class="bottle-action" onclick="copyBottleLink()">复制链接</button>
+  <button class="bottle-action" onclick="downloadBottleCard()">保存卡片</button>
+  <button class="bottle-action" onclick="systemShareBottle()">系统分享</button>
+  <button class="bottle-action" onclick="closeBottle()">取消</button>`;
+
+const BOTTLE_SVG = `
+<svg viewBox="0 0 180 270" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bGlass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="rgba(255,255,255,0.38)"/>
+      <stop offset="0.5" stop-color="rgba(150,215,255,0.12)"/>
+      <stop offset="1" stop-color="rgba(120,200,255,0.30)"/>
+    </linearGradient>
+    <linearGradient id="bCork" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E3BC80"/>
+      <stop offset="1" stop-color="#B4884A"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="90" cy="252" rx="70" ry="10" fill="rgba(0,0,0,0.30)"/>
+  <rect x="66" y="16" width="48" height="30" rx="7" fill="url(#bCork)" stroke="rgba(0,0,0,0.2)"/>
+  <line x1="74" y1="25" x2="106" y2="25" stroke="rgba(0,0,0,0.14)" stroke-width="1.5"/>
+  <line x1="74" y1="33" x2="106" y2="33" stroke="rgba(0,0,0,0.14)" stroke-width="1.5"/>
+  <path d="M66 46 h48 v16 a9 9 0 0 1 -9 9 h-30 a9 9 0 0 1 -9 -9 Z" fill="url(#bGlass)" stroke="rgba(255,255,255,0.55)" stroke-width="1.6"/>
+  <path d="M58 76 h64 c15 0 28 15 28 42 c0 44 -14 92 -60 92 c-46 0 -60 -48 -60 -92 c0 -27 13 -42 28 -42 Z" fill="url(#bGlass)" stroke="rgba(255,255,255,0.55)" stroke-width="1.6"/>
+  <g transform="rotate(-5 90 156)">
+    <rect x="77" y="118" width="26" height="96" rx="9" fill="#F6EEDA" stroke="rgba(180,150,110,0.55)"/>
+    <line x1="85" y1="134" x2="95" y2="134" stroke="rgba(180,150,110,0.65)" stroke-width="2" stroke-linecap="round"/>
+    <line x1="85" y1="146" x2="95" y2="146" stroke="rgba(180,150,110,0.65)" stroke-width="2" stroke-linecap="round"/>
+    <line x1="85" y1="158" x2="91" y2="158" stroke="rgba(180,150,110,0.65)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <path d="M72 96 c7 10 7 58 0 86" stroke="rgba(255,255,255,0.65)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="120" cy="120" r="4" fill="rgba(255,255,255,0.6)"/>
+  <ellipse cx="90" cy="228" rx="50" ry="14" fill="rgba(150,215,255,0.12)"/>
+</svg>`;
+
+const WAVE_SVG_1 = `<svg viewBox="0 0 1200 260" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 90 C150 40 450 40 600 90 C750 140 1050 140 1200 90 V260 H0 Z" fill="rgba(120,185,235,0.20)"/></svg>`;
+const WAVE_SVG_2 = `<svg viewBox="0 0 1200 260" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 130 C150 80 450 80 600 130 C750 180 1050 180 1200 130 V260 H0 Z" fill="rgba(140,200,245,0.26)"/></svg>`;
+const WAVE_SVG_3 = `<svg viewBox="0 0 1200 260" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 70 C150 120 450 120 600 70 C750 20 1050 20 1200 70 V260 H0 Z" fill="rgba(90,160,220,0.16)"/></svg>`;
+
+let bottleStarsInjected = false;
+
+function initBottleUI() {
+  const float = document.getElementById('bottle-float');
+  if (float && !float.querySelector('svg')) float.innerHTML = BOTTLE_SVG;
+  const waves = document.getElementById('bottle-waves');
+  if (waves && !waves.children.length) {
+    waves.innerHTML = `<div class="bottle-wave w1">${WAVE_SVG_1}</div>
+      <div class="bottle-wave w2">${WAVE_SVG_2}</div>
+      <div class="bottle-wave w3">${WAVE_SVG_3}</div>`;
+  }
+}
+
+function injectStars() {
+  const el = document.querySelector('#bottle-share .bottle-stars');
+  if (!el || bottleStarsInjected) return;
+  bottleStarsInjected = true;
+  let s = '';
+  for (let i = 0; i < 70; i++) {
+    const sz = (1 + Math.random() * 1.6).toFixed(1);
+    s += `<span class="bottle-star" style="left:${(Math.random()*100).toFixed(2)}%;top:${(Math.random()*100).toFixed(2)}%;width:${sz}px;height:${sz}px;animation-delay:${(Math.random()*3).toFixed(2)}s"></span>`;
+  }
+  el.innerHTML = s;
+}
+
+function b64Encode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+function b64Decode(b64) {
+  const bin = atob(b64);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function encodeBottle(obj) {
+  return b64Encode(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decodeBottle(h) {
+  try {
+    let s = h.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return JSON.parse(b64Decode(s));
+  } catch { return null; }
+}
+
+function typeKeyOf(type) {
+  for (const k of Object.keys(PERSONALITY_TYPES)) if (PERSONALITY_TYPES[k] === type) return k;
+  return 'citrine';
+}
+
+function currentBottleData() {
+  const p = computePersonality(allPrescriptions);
+  if (!p) return null;
+  const best = bestPerfume(allPrescriptions);
+  return {
+    v: 1,
+    type: typeKeyOf(p.type),
+    fit: p.fit,
+    count: p.count,
+    axes: p.axes,
+    best: best ? (best.id || best.name || null) : null,
+  };
+}
+
+function bottleToReport(d) {
+  const t = PERSONALITY_TYPES[d.type] || PERSONALITY_TYPES.citrine;
+  return {
+    ep: t.ep, emoji: t.emoji, tagline: t.tagline, sig: t.sig || [],
+    fit: d.fit, count: d.count, axes: d.axes || [], best: d.best,
+  };
+}
+
+function dbById(id) {
+  if (!id) return null;
+  if (PRADA_DB[id]) return PRADA_DB[id];
+  const alias = PRADA_ALIAS[id];
+  return alias ? (PRADA_DB[alias] || null) : null;
+}
+
+function bottleLink() {
+  const d = currentBottleData();
+  if (!d) return null;
+  return location.href.split('#')[0] + '#bottle=' + encodeBottle(d);
+}
+
+function reportPreviewHTML(r) {
+  const db = dbById(r.best);
+  const fragName = db ? db.name : (r.best || '—');
+  return `
+    <span class="br-emoji">${r.emoji}</span>
+    <span class="br-ep">${r.ep}</span>
+    <span class="br-frag">🍾 本命香 · ${fragName}</span>`;
+}
+
+function letterHTML(r) {
+  const db = dbById(r.best);
+  const fragName = db ? db.name : (r.best || '—');
+  const img = db ? db.imageUrl : '';
+  const axes = (r.axes || []).map(a => axisBarHTML(a)).join('');
+  const sig = (r.sig || []).map(s => `<span class="p-accord">${s}</span>`).join('');
+  return `
+    <p class="bl-brand">Prada 香气人格报告</p>
+    <div class="bl-ep">${r.ep}</div>
+    <div style="font-size:11px;color:rgba(42,35,24,0.62);font-style:italic;font-family:var(--serif);line-height:1.6">${r.tagline || ''}</div>
+    <div class="bl-line"></div>
+    <p class="bl-label">本命香</p>
+    <div class="bl-frag">${img ? `<img src="${img}" alt="" style="width:26px;height:36px;object-fit:cover;border-radius:5px;vertical-align:middle;margin-right:9px" onerror="this.style.display='none'">` : ''}${fragName}</div>
+    <div class="bl-line"></div>
+    <p class="bl-label">人格契合</p>
+    <div class="bl-fit"><b>${r.fit}%</b> · 基于 ${r.count} 次香气记录</div>
+    <div style="margin-top:12px">${axes}</div>
+    ${sig ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">${sig}</div>` : ''}
+    <button class="bl-btn" onclick="closeBottle()">我也要测自己的香气人格</button>`;
+}
+
+window.openBottleShare = function() {
+  const d = currentBottleData();
+  if (!d) return;
+  const ov = document.getElementById('bottle-share');
+  if (!ov) return;
+  const r = bottleToReport(d);
+  ov.classList.remove('recv');
+  ov.querySelector('.bottle-report').innerHTML = reportPreviewHTML(r);
+  ov.querySelector('.bottle-actions').innerHTML = BOTTLE_ACTIONS_SEND;
+  const letter = ov.querySelector('.bottle-letter');
+  if (letter) letter.classList.remove('open');
+  const status = ov.querySelector('.bottle-status');
+  status.classList.remove('show'); status.textContent = '';
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  injectStars();
+};
+
+window.closeBottle = function() {
+  document.querySelectorAll('.bottle-overlay').forEach(o => o.classList.remove('open'));
+  document.body.style.overflow = '';
+};
+
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else fallbackCopy(text);
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch {}
+  document.body.removeChild(ta);
+}
+
+window.throwBottle = function() {
+  const link = bottleLink();
+  if (!link) return;
+  const btn = document.querySelector('#bottle-share [data-action="throw"]');
+  if (btn) { btn.textContent = '漂流中…'; btn.disabled = true; }
+  setTimeout(() => {
+    const status = document.querySelector('#bottle-share .bottle-status');
+    if (status) { status.textContent = '🌊 瓶子已漂入大海 · 链接已复制'; status.classList.add('show'); }
+    if (btn) { btn.textContent = '再扔一只'; btn.disabled = false; }
+  }, 1100);
+  copyText(link);
+};
+
+window.copyBottleLink = function() {
+  const link = bottleLink();
+  if (!link) return;
+  copyText(link);
+  const status = document.querySelector('#bottle-share .bottle-status');
+  if (status) { status.textContent = '✅ 链接已复制 · 发给朋友即可拆开'; status.classList.add('show'); }
+};
+
+window.systemShareBottle = function() {
+  const link = bottleLink();
+  if (!link) return;
+  const d = currentBottleData();
+  if (!d) return;
+  const r = bottleToReport(d);
+  const text = `我在 Prada 香气地图测出了香气人格「${r.ep}」，契合 ${r.fit}%。拆开我的漂流瓶看看 → ${link}`;
+  if (navigator.share) {
+    navigator.share({ title: 'Prada 香气人格漂流瓶', text }).catch(() => {});
+  } else {
+    copyText(link);
+    const status = document.querySelector('#bottle-share .bottle-status');
+    if (status) { status.textContent = '✅ 已复制链接 · 系统分享不可用'; status.classList.add('show'); }
+  }
+};
+
+function roundRectPath(x, x0, y0, w, h, r) {
+  x.beginPath();
+  x.moveTo(x0 + r, y0);
+  x.arcTo(x0 + w, y0, x0 + w, y0 + h, r);
+  x.arcTo(x0 + w, y0 + h, x0, y0 + h, r);
+  x.arcTo(x0, y0 + h, x0, y0, r);
+  x.arcTo(x0, y0, x0 + w, y0, r);
+  x.closePath();
+}
+
+function drawBottleOnCanvas(ctx, cx, cy) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => { ctx.drawImage(img, cx - 78, cy - 120, 156, 234); res(); };
+    img.onerror = () => res();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(BOTTLE_SVG);
+  });
+}
+
+async function drawBottleCard(r) {
+  const db = dbById(r.best);
+  const fragName = db ? db.name : (r.best || '—');
+  const w = 600, h = 840;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  const font = '"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif';
+
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#123250'); g.addColorStop(1, '#071427');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+
+  for (let i = 0; i < 130; i++) {
+    x.globalAlpha = 0.2 + Math.random() * 0.65;
+    x.fillStyle = '#ffffff';
+    x.beginPath();
+    x.arc(Math.random() * w, Math.random() * h * 0.5, Math.random() * 1.4 + 0.4, 0, Math.PI * 2);
+    x.fill();
+  }
+  x.globalAlpha = 1;
+
+  x.fillStyle = 'rgba(255,255,255,0.85)';
+  x.beginPath(); x.arc(505, 86, 26, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(255,255,255,0.10)';
+  x.beginPath(); x.arc(505, 86, 42, 0, Math.PI * 2); x.fill();
+
+  const waveCols = ['rgba(120,185,235,0.16)', 'rgba(140,200,245,0.22)', 'rgba(90,160,220,0.14)'];
+  waveCols.forEach((col, wi) => {
+    x.fillStyle = col;
+    x.beginPath();
+    const y0 = h - 70 + wi * 34;
+    x.moveTo(0, y0);
+    for (let px = 0; px <= w; px += 10) x.lineTo(px, y0 + Math.sin(px / 44 + wi * 2.1) * 20);
+    x.lineTo(w, h); x.lineTo(0, h); x.closePath(); x.fill();
+  });
+
+  const cw = 440, ch = 320, cx0 = (w - cw) / 2, cy0 = h * 0.60;
+  x.shadowColor = 'rgba(0,0,0,0.35)'; x.shadowBlur = 30; x.shadowOffsetY = 10;
+  roundRectPath(x, cx0, cy0, cw, ch, 22);
+  x.fillStyle = '#FFF9EC'; x.fill();
+  x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
+
+  x.fillStyle = '#2A2318';
+  x.font = '600 13px ' + font;
+  x.fillText('P R A D A  ·  香 气 人 格 报 告', cx0 + 28, cy0 + 40);
+  x.font = 'italic 44px Georgia, "Songti SC", serif';
+  x.fillText(r.ep, cx0 + 28, cy0 + 106);
+  x.font = '13px ' + font;
+  x.fillStyle = 'rgba(42,35,24,0.55)';
+  x.fillText(r.tagline || '', cx0 + 28, cy0 + 140, cw - 56);
+
+  x.strokeStyle = 'rgba(42,35,24,0.14)';
+  x.beginPath(); x.moveTo(cx0 + 28, cy0 + 158); x.lineTo(cx0 + cw - 28, cy0 + 158); x.stroke();
+
+  x.fillStyle = '#7A4A2B';
+  x.font = '600 15px Georgia, "Songti SC", serif';
+  x.fillText('本命香  ' + fragName, cx0 + 28, cy0 + 190);
+  x.font = '12px ' + font;
+  x.fillStyle = 'rgba(42,35,24,0.7)';
+  x.fillText('人格契合  ' + r.fit + '%   ·   基于 ' + r.count + ' 次香气记录', cx0 + 28, cy0 + 220);
+
+  x.font = '9px ' + font;
+  x.fillStyle = 'rgba(42,35,24,0.35)';
+  x.fillText('来自 Prada 香气地图 · 漂流瓶', cx0 + 28, cy0 + ch - 22);
+
+  await drawBottleOnCanvas(x, w / 2, 400);
+
+  return c.toDataURL('image/png');
+}
+
+window.downloadBottleCard = async function() {
+  const d = currentBottleData();
+  if (!d) return;
+  const r = bottleToReport(d);
+  const url = await drawBottleCard(r);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `prada-香气人格-${r.ep}.png`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  const status = document.querySelector('#bottle-share .bottle-status');
+  if (status) { status.textContent = '🖼️ 香气人格卡片已保存'; status.classList.add('show'); }
+};
+
+window.openBottleFloat = function() {
+  const ov = document.getElementById('bottle-share');
+  if (!ov || !ov.classList.contains('recv')) {
+    const f = document.getElementById('bottle-float');
+    if (f) { f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; }
+    return;
+  }
+  const letter = ov.querySelector('.bottle-letter');
+  if (letter) letter.classList.add('open');
+};
+
+function checkIncomingBottle() {
+  const m = location.hash.match(/#bottle=([A-Za-z0-9_-]+)/);
+  if (!m) return;
+  const d = decodeBottle(m[1]);
+  if (!d) return;
+  const ov = document.getElementById('bottle-share');
+  if (!ov) return;
+  const r = bottleToReport(d);
+  ov.classList.add('open', 'recv');
+  ov.querySelector('.bottle-report').innerHTML = reportPreviewHTML(r);
+  ov.querySelector('.bottle-actions').innerHTML = `
+    <button class="bottle-action primary" onclick="openBottleFloat()">拆开瓶中信</button>
+    <button class="bottle-action" onclick="closeBottle()">晚点再看</button>`;
+  const letter = ov.querySelector('.bottle-letter');
+  if (letter) { letter.innerHTML = letterHTML(r); letter.classList.remove('open'); }
+  document.body.style.overflow = 'hidden';
+  injectStars();
+}
+
+// ─────────────────────────────────────────────────────────────
+// 初始化：优先读真实 localStorage，fallback 到 Mock 数据
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const real = loadPrescriptions();
+  allPrescriptions = real && real.length ? real : MOCK_PRESCRIPTIONS;
+  render();
+  initBottleUI();
+  checkIncomingBottle();
+});
+</script>
+</body>
+</html>
