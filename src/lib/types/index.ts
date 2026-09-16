@@ -234,3 +234,75 @@ export interface TriMapping {
     factors: string[];
   };
 }
+
+// ============================================================
+// 虚拟香薰机 · 调配层接口契约（B 定义，A / C 对接）
+// ============================================================
+
+/**
+ * 7 个基础香调精油仓
+ *
+ * 设计原理：设备的仓不装"整瓶香水"，而是装调香师用的基础香料原液。
+ * 这 7 个仓由 Prada 全目录 13 款香水的真实 notes 反推归纳而成，
+ * 因此任何一款推荐都能被这几个仓"调配"出来——就像打印机用 CMYK
+ * 四色墨盒印出千万种颜色。
+ */
+export type CartridgeId =
+  | "citrus"   // 柑橘清新
+  | "floral"   // 花香
+  | "woody"    // 木质
+  | "oriental" // 东方琥珀
+  | "vanilla"  // 香草甜香
+  | "aromatic" // 芳香辛香
+  | "musk";    // 麝香定香
+
+/** 精油仓定义 */
+export interface Cartridge {
+  id: CartridgeId;
+  /** 仓名（中文） */
+  label: string;
+  emoji: string;
+  /** 主色，用于仓体辉光 / 氛围灯 / 出雾混色 */
+  color: string;
+  /** 该仓覆盖的香料关键词，供 notes → 仓 映射使用 */
+  keywords: string[];
+}
+
+/** 单个精油仓的出雾占比 */
+export interface BlendComponent {
+  cartridge: CartridgeId;
+  /** 百分比，所有 component 之和恒为 100 */
+  pct: number;
+}
+
+/** 调配层输出：一次"实时调配"的完整配方卡 */
+export interface BlendRecipe {
+  sourceFragranceId: string;
+  sourceFragranceName: string;
+  /** 按 pct 降序排列 */
+  components: BlendComponent[];
+  /** 氛围灯主色 = 占比最高仓的颜色 */
+  lightColor: string;
+  /** 出雾混合色，顺序与 components 一致 */
+  mistColors: string[];
+  /** 出雾强度：沿用挥发度（高挥发 = 强而短，低挥发 = 弱而长） */
+  intensity: Volatility;
+  /** 冷暖调性：由各仓热值按配比加权得出 */
+  warmth: "cool" | "neutral" | "warm";
+}
+
+/** 虚拟香薰机状态机 */
+export type DeviceState =
+  | "idle"
+  | "sensing"
+  | "prescribing"
+  | "blending"
+  | "releasing"
+  | "complete";
+
+/** B → C 的设备指令（C 的香薰机组件只消费此结构，不自行造数据） */
+export interface DeviceCommand {
+  state: DeviceState;
+  /** blending 及之后阶段有值 */
+  recipe?: BlendRecipe;
+}
