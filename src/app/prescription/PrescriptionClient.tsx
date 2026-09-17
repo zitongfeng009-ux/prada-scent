@@ -263,6 +263,29 @@ export default function PrescriptionClient({
     useState<Prescription | null>(initialPrescription);
   const [loading, setLoading] = useState(false);
 
+  /* ────────────────────────────────────────────────
+   * Physical AI 入口（B/d5）
+   * 把本页已确定的环境 + 场景 + 情绪原样拼成 /device 的 query，
+   * 沿用首页 → 处方页已有的参数契约（city/temp/humidity/weather/lat/lng/scene），
+   * 额外带 emotion：设备页感知层读到它就固定感知结果，
+   * 于是「网页上看到的处方」与「香薰机放出的味道」必定是同一支，演示不出岔。
+   * ──────────────────────────────────────────────── */
+  const deviceHref = (() => {
+    if (!prescription) return "/device";
+    const { environment, user } = prescription.request;
+    const q = new URLSearchParams({
+      city: environment.city,
+      temp: String(environment.temperature),
+      humidity: String(environment.humidity),
+      weather: environment.weather,
+      lat: String(environment.lat),
+      lng: String(environment.lng),
+      scene: user.scene,
+      emotion: user.emotions.join(","),
+    });
+    return `/device?${q.toString()}`;
+  })();
+
   // 保存处方到 localStorage（供日记页读取）
   useEffect(() => {
     if (!prescription) return;
@@ -486,7 +509,42 @@ export default function PrescriptionClient({
         </div>
       </section>
 
-      {/* ─── Section 7: 日记入口 ─── */}
+      {/* ─── Section 7: 虚拟香薰机（Physical AI 闭环入口） ─── */}
+      <section className="px-6 py-12 max-w-2xl mx-auto text-center">
+        <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-400 mb-4">
+          不止于屏幕
+        </p>
+        <h3
+          className="text-base mb-2"
+          style={{ fontFamily: "Georgia, 'Times New Roman', serif", color: "#0D0D0D" }}
+        >
+          让 AI 现场把这纸香笺调配成真的气味
+        </h3>
+        <p className="text-[11px] leading-relaxed text-neutral-500 mb-6">
+          虚拟香薰机将以{recommendedFragrances[0]?.name ?? "这支香"}为蓝本，按比例混合 7 个精油仓并现场释放。
+        </p>
+        <a
+          href={deviceHref}
+          className="inline-block px-10 py-4 text-[10px] uppercase tracking-[0.15em] transition-all duration-400"
+          style={{
+            border: "1px solid #0D0D0D",
+            color: "#0D0D0D",
+            background: "transparent",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#0D0D0D";
+            e.currentTarget.style.color = "#F7F6F2";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "#0D0D0D";
+          }}
+        >
+          召唤虚拟香薰机 →
+        </a>
+      </section>
+
+      {/* ─── Section 8: 日记入口 ─── */}
       <section className="px-6 py-12 max-w-2xl mx-auto text-center">
         <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-400 mb-4">
           保存今日香气记忆

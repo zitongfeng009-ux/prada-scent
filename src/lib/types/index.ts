@@ -74,6 +74,16 @@ export const WEATHER_EMOJI: Record<WeatherCondition, string> = {
   stormy: "⛈️",
 };
 
+/** 天气中文名（全站共用，避免各页自己写一份） */
+export const WEATHER_LABEL: Record<WeatherCondition, string> = {
+  sunny: "晴",
+  cloudy: "多云",
+  rainy: "下雨",
+  snowy: "下雪",
+  foggy: "雾",
+  stormy: "雷雨",
+};
+
 /** 环境数据（A 角色提供） */
 export interface EnvironmentInput {
   /** 城市名 */
@@ -116,6 +126,23 @@ export type FragranceFamily =
   | "aromatic"
   | "chypre"
   | "fougere";
+
+/**
+ * 香调家族中文名 —— 全站唯一来源
+ * 以前引擎里散落着几套三元判断，漏写 fresh 等值时会掉进 else，
+ * 导致同一支香水在不同位置被叫成「经典调 / 芳香调 / 清新调」。
+ * 需要展示家族名时一律用这张表，不要再写 if 链。
+ */
+export const FAMILY_LABEL: Record<FragranceFamily, string> = {
+  citrus: "柑橘调",
+  floral: "花香调",
+  woody: "木质调",
+  oriental: "东方调",
+  fresh: "清新调",
+  aromatic: "芳香调",
+  chypre: "甘苔调",
+  fougere: "馥奇调",
+};
 
 /** 香调层级 */
 export interface OlfactoryNotes {
