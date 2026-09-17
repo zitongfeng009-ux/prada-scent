@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 品牌底色：全站唯一页面背景 #F7F6F2（Prada Off-White）+ 主深色 #0D0D0D。
+   * 刻意不做深色模式反转：各页面均自行设定文字与卡片色，
+   * 若跟随系统反成近黑底 + 近白字，未显式着色的文字会在浅底上隐形。 */
+  --background: #f7f6f2;
+  --foreground: #0d0d0d;
 }
 
 @theme inline {
@@ -14,8 +17,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #f7f6f2;
+    --foreground: #0d0d0d;
   }
 }
 

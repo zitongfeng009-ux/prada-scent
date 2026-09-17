@@ -143,9 +143,15 @@ export default function DeviceClient({
       {/* 顶栏 */}
       <div className="mx-auto flex max-w-5xl items-center justify-between border-b pb-4"
         style={{ borderColor: "rgba(13,13,13,.08)" }}>
-        <a href="/" className="text-[9px] uppercase tracking-[.24em] text-neutral-400 hover:text-neutral-900">
-          ← 返回
-        </a>
+        <div className="flex items-center gap-6">
+          <a href="/" className="text-[9px] uppercase tracking-[.24em] text-neutral-400 hover:text-neutral-900">
+            ← 返回
+          </a>
+          {/* 路演用：评委一问痛点，不切 PPT，当场点给他看 */}
+          <a href="/why" className="text-[9px] uppercase tracking-[.24em] text-neutral-400 hover:text-neutral-900">
+            问题陈述
+          </a>
+        </div>
         <span className="text-[9px] uppercase tracking-[.24em] text-neutral-500">
           Prada · Scent Aura
         </span>
