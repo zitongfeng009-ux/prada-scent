@@ -292,6 +292,39 @@ export default function Home() {
         >
           获取今日香笺
         </button>
+
+        {/* 虚拟香薰机 + 问题陈述 入口 */}
+        <section className="flex w-full max-w-md flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const params = new URLSearchParams({
+                city: environment.city,
+                temp: String(environment.temperature),
+                humidity: String(environment.humidity),
+                weather: environment.weather,
+                lat: String(environment.lat),
+                lng: String(environment.lng),
+                scene: selectedScene ?? "deep_work",
+              });
+              if (selectedEmotions.length > 0) {
+                params.set("emotion", selectedEmotions[0]);
+              }
+              window.location.href = `/device?${params.toString()}`;
+            }}
+            className="w-full border border-[#0D0D0D] bg-transparent px-8 py-4 text-xs tracking-[0.3em] text-[#0D0D0D] transition-colors duration-[400ms] hover:bg-[#0D0D0D] hover:text-[#F7F6F2]"
+            style={{ borderRadius: 0 }}
+          >
+            召唤虚拟香薰机
+          </button>
+
+          <a
+            href="/why"
+            className="text-center text-[11px] tracking-[0.2em] text-neutral-500 transition-colors duration-[400ms] hover:text-[#0D0D0D] hover:underline underline-offset-4"
+          >
+            我们为什么做这件事 →
+          </a>
+        </section>
       </div>
     </main>
   );
