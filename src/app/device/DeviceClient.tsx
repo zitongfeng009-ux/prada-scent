@@ -15,8 +15,7 @@ import { computeBlendRecipe } from "@/lib/engine/blend";
 import { CARTRIDGES } from "@/lib/data/cartridges";
 // ⚠️ A 交付后改为：import { senseEmotions } from "@/lib/ai/emotionDetection";
 import { senseEmotions, type EmotionSenseResult } from "./placeholderSense";
-// ⚠️ C 交付后改为：import VirtualScentDevice from "@/components/device/VirtualScentDevice";
-import PlaceholderScentDevice from "./PlaceholderScentDevice";
+import VirtualScentDevice from "@/components/device/VirtualScentDevice";
 
 /**
  * /device —— Prada Scent Aura 虚拟智能香薰机
@@ -301,7 +300,7 @@ export default function DeviceClient({
 
         {/* ── 右：虚拟设备 ── */}
         <section className="flex flex-col items-center justify-start">
-          <PlaceholderScentDevice command={command} />
+          <VirtualScentDevice command={command} />
 
           {primaryEmotion && (
             <p className="mt-6 text-[9px] uppercase tracking-[.2em] text-neutral-400">
