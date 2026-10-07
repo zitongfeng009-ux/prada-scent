@@ -15,6 +15,10 @@ import { CARTRIDGE_LIST, CARTRIDGES } from "@/lib/data/cartridges";
  *
  * 数据来源只有 props 一份：state 决定整机阶段，recipe 决定液位 / 配比 / 氛围灯 / 出雾。
  * 所有界面文案为中文；配色与线条遵循 UI设计规范.md（Off-White 底、1px 发丝线、0 圆角）。
+ *
+ * v2 机身改为「扩香机」结构：穹顶（气孔阵列 + 液压表）→ 束腰液仓（余量视窗）→ 底座，
+ * 顶部出雾口随状态亮起。六个状态各有独立动作：气孔检测 / 液压表指针扫动 / 三叶风扇 /
+ * 余量视窗填充 / 出雾 / 余香呼吸。机身仍以 Prada Black 为主，符合品牌冷感基调。
  */
 
 /** 六个状态的先后顺序，用于机身上的阶段指示灯 */
@@ -67,6 +71,12 @@ const LIQUID_VISIBLE: DeviceState[] = [
 /** 数值跳动动画只在 blending 期间出现 */
 const BLENDING: DeviceState[] = ["blending"];
 
+/** 穹顶侧面气孔阵列：用固定几何生成，不含任何状态数据 */
+const VENT_DOTS = [0, 1, 2, 3, 4];
+
+/** 底座散热格栅 */
+const BASE_SLATS = [0, 1, 2, 3];
+
 export default function VirtualScentDevice({
   command,
 }: {
@@ -82,6 +92,24 @@ export default function VirtualScentDevice({
   const mistDur = MIST_DURATION[recipe?.intensity ?? "medium"] ?? "3.6s";
   const glow = recipe?.lightColor ?? "#C4C4C4";
   const activeIndex = STATE_ORDER.indexOf(state);
+
+  /** sensing 的扫描与检测环完全由 CSS 依 vsd-s-sensing 派生，无需在此判断 */
+  const prescribing = state === "prescribing";
+  /** 释放完成才出现日记入口，避免演示过程中被提前点走 */
+  const finished = state === "complete";
+
+  /** 液压表（realistic pressure gauge）：仅 prescribing 阶段扫动，静止时指向低液仓 */
+  const gaugeAngle = prescribing ? -140 : blending ? -160 : -180;
+  /** 液仓余量视窗：出配方后按最强仓占比抬升 */
+  const reserveLevel = liquidVisible
+    ? Math.min(
+        1,
+        Math.max(
+          0.18,
+          (recipe?.components.reduce((m, c) => Math.max(m, c.pct), 0) ?? 0) / 100,
+        ),
+      )
+    : 0;
 
   const pctOf = (id: string) =>
     recipe?.components.find((c) => c.cartridge === id)?.pct ?? 0;
@@ -139,7 +167,7 @@ export default function VirtualScentDevice({
       />
 
       <div className="vsd-stage">
-        {/* 出雾区：仅 releasing / complete 有雾 */}
+        {/* 出雾区：仅 releasing / complete 有雾，从顶部出雾口升起 */}
         <div className="vsd-mist-zone">
           {emitting &&
             (recipe?.mistColors ?? []).slice(0, 5).map((color, i) => (
@@ -156,25 +184,132 @@ export default function VirtualScentDevice({
             ))}
         </div>
 
-        {/* 机身 */}
+        {/* ── 机身：扩香机 ── */}
         <div
           className="vsd-body"
-          style={{
-            boxShadow: emitting ? `0 0 46px -14px ${glow}` : "none",
-          }}
+          style={
+            { "--vsd-glow": glow } as React.CSSProperties
+          }
         >
           {/* 感知扫描线：仅 sensing */}
           <span className="vsd-scan" aria-hidden />
-          {/* 分析环：仅 prescribing */}
-          <span className="vsd-ring" aria-hidden />
 
-          <span className="vsd-mark" aria-hidden />
-          <p className="vsd-brand">Scent Aura</p>
-          {/* 顶部出雾口 */}
-          <span
-            className="vsd-vent"
-            style={{ background: emitting ? glow : "rgba(255,255,255,.14)" }}
-          />
+          {/* ① 穹顶：顶部出雾口 + 气孔阵列 */}
+          <div className="vsd-dome">
+            <span className="vsd-nozzle" aria-hidden />
+            <span className="vsd-nozzle-slit" aria-hidden />
+            <div className="vsd-vents" aria-hidden>
+              {VENT_DOTS.map((n) => (
+                <span key={n} className="vsd-vent-dot" />
+              ))}
+            </div>
+          </div>
+
+          {/* ② 束腰液仓：三元映射 + 液压表 + 余量视窗 */}
+          <div className="vsd-waist">
+            {/* 三元映射：三枚三角随状态依次点亮 */}
+            <div className="vsd-tri" aria-hidden>
+              <span className="vsd-tri-a" />
+              <span className="vsd-tri-b" />
+              <span className="vsd-tri-c" />
+            </div>
+
+            {/* 液压表：prescribing 阶段指针扫动（组件只读 state，不驱动数值变化） */}
+            <div className="vsd-gauge" aria-hidden>
+              <svg viewBox="0 0 48 48" className="vsd-gauge-svg">
+                <circle
+                  className="vsd-gauge-track"
+                  cx="24"
+                  cy="24"
+                  r="18"
+                  fill="none"
+                  strokeWidth="1"
+                />
+                {/* 刻度：固定几何 */}
+                {[0, 1, 2, 3, 4, 5, 6].map((n) => {
+                  const a = (-210 + n * 30) * (Math.PI / 180);
+                  return (
+                    <line
+                      key={n}
+                      className="vsd-gauge-tick"
+                      x1={24 + Math.cos(a) * 18}
+                      y1={24 + Math.sin(a) * 18}
+                      x2={24 + Math.cos(a) * 15}
+                      y2={24 + Math.sin(a) * 15}
+                      strokeWidth="1"
+                    />
+                  );
+                })}
+                <line
+                  className="vsd-gauge-needle"
+                  x1="24"
+                  y1="24"
+                  x2="24"
+                  y2="11"
+                  strokeWidth="1.5"
+                  style={{ ["--vsd-needle" as string]: `${gaugeAngle}deg` }}
+                />
+                <circle className="vsd-gauge-hub" cx="24" cy="24" r="1.8" />
+              </svg>
+            </div>
+
+            {/* 液仓余量视窗：出配方后按占比最高的仓抬升 */}
+            <div className="vsd-reserve" aria-hidden>
+              <span
+                className="vsd-reserve-fill"
+                style={{
+                  height: `${reserveLevel * 100}%`,
+                  background: glow,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ③ 底座：品牌铭牌 + 风道 + 散热格栅 */}
+          <div className="vsd-base">
+            <span className="vsd-mark" aria-hidden />
+            <p className="vsd-brand">Scent Aura</p>
+
+            {/* 风道：sensing 检测 / prescribing 旋转，两态动作不同 */}
+            <div className="vsd-duct" aria-hidden>
+              <svg viewBox="0 0 48 48" className="vsd-duct-svg">
+                <circle
+                  className="vsd-duct-housing"
+                  cx="24"
+                  cy="24"
+                  r="21"
+                  fill="none"
+                  strokeWidth="1"
+                />
+                <g className="vsd-blades">
+                  {[0, 120, 240].map((deg) => (
+                    <path
+                      key={deg}
+                      className="vsd-blade"
+                      d="M24 24 Q 40 20 43 24 Q 40 28 24 24 Z"
+                      transform={`rotate(${deg} 24 24)`}
+                    />
+                  ))}
+                  <circle className="vsd-hub" cx="24" cy="24" r="3.2" />
+                </g>
+                {/* 检测环：sensing 时逐步扫过 */}
+                <circle
+                  className="vsd-detect"
+                  cx="24"
+                  cy="24"
+                  r="21"
+                  fill="none"
+                  strokeWidth="1.5"
+                />
+              </svg>
+            </div>
+
+            <div className="vsd-base-slats" aria-hidden>
+              {BASE_SLATS.map((n) => (
+                <span key={n} className="vsd-base-slat" />
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* 胶囊标签：六态各自的阶段文案 */}
@@ -202,6 +337,16 @@ export default function VirtualScentDevice({
           </p>
           <div className="vsd-rack-row">{vials}</div>
         </div>
+
+        {/* 释放完成 → 情绪日记入口（只在 complete 态出现） */}
+        {finished && (
+          <div className="vsd-diary">
+            <p className="vsd-diary-quote">闻过一次不算体验，它记得你</p>
+            <a href="/diary" className="vsd-diary-btn">
+              查看情绪日记
+            </a>
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -249,8 +394,8 @@ export default function VirtualScentDevice({
         /* ── 出雾 ── */
         .vsd-mist-zone {
           position: relative;
-          height: 92px;
-          width: 190px;
+          height: 84px;
+          width: 210px;
         }
         .vsd-mist {
           position: absolute;
@@ -271,22 +416,20 @@ export default function VirtualScentDevice({
         @keyframes vsd-rise {
           0%   { transform: translate(-50%, 0) scale(.5); opacity: 0; }
           18%  { opacity: .82; }
-          100% { transform: translate(-50%, -96px) scale(2.7); opacity: 0; }
+          100% { transform: translate(-50%, -88px) scale(2.7); opacity: 0; }
         }
 
-        /* ── 机身 ── */
+        /* ── 机身（扩香机）── */
         .vsd-body {
           position: relative;
-          width: 186px;
-          height: 196px;
-          background: #0D0D0D;
-          border: 1px solid rgba(196,196,196,.28);
+          width: 210px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: flex-start;
-          padding-top: 30px;
           overflow: hidden;
+          background: #0D0D0D;
+          border: 1px solid rgba(196,196,196,.28);
+          border-radius: 78px 78px 0 0;
           transition: box-shadow 1.2s cubic-bezier(.25,1,.5,1),
             border-color .6s cubic-bezier(.25,1,.5,1);
         }
@@ -297,28 +440,252 @@ export default function VirtualScentDevice({
           border-color: rgba(196,196,196,.5);
         }
 
-        .vsd-vent {
+        /* ① 穹顶 */
+        .vsd-dome {
+          position: relative;
+          width: 100%;
+          height: 74px;
+          display: flex;
+          justify-content: center;
+        }
+
+        /* 顶部出雾口 */
+        .vsd-nozzle {
           position: absolute;
-          top: -2px;
+          top: 0;
           left: 50%;
           transform: translateX(-50%);
-          width: 52px;
-          height: 3px;
-          transition: background 1s cubic-bezier(.25,1,.5,1);
+          width: 54px;
+          height: 7px;
+          background: #1A1A1A;
+          border: 1px solid rgba(196,196,196,.32);
+          border-top: none;
+          border-radius: 0 0 4px 4px;
+          transition: background 1s cubic-bezier(.25,1,.5,1),
+            box-shadow 1s cubic-bezier(.25,1,.5,1);
+        }
+        .vsd-s-releasing .vsd-nozzle,
+        .vsd-s-complete .vsd-nozzle {
+          background: var(--vsd-glow);
+          box-shadow: 0 0 18px -2px var(--vsd-glow);
+        }
+        .vsd-nozzle-slit {
+          position: absolute;
+          top: 2px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 30px;
+          height: 1px;
+          background: rgba(247,246,242,.18);
+          transition: opacity .8s cubic-bezier(.25,1,.5,1);
+        }
+        .vsd-s-releasing .vsd-nozzle-slit,
+        .vsd-s-complete .vsd-nozzle-slit { opacity: 0; }
+
+        /* 穹顶气孔阵列：sensing 进入检测态时逐孔亮起 */
+        .vsd-vents {
+          position: absolute;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 7px;
+        }
+        .vsd-vent-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: rgba(247,246,242,.16);
+          transition: background .45s cubic-bezier(.25,1,.5,1),
+            box-shadow .45s cubic-bezier(.25,1,.5,1);
+        }
+        .vsd-s-sensing .vsd-vent-dot,
+        .vsd-s-prescribing .vsd-vent-dot,
+        .vsd-s-blending .vsd-vent-dot,
+        .vsd-s-releasing .vsd-vent-dot,
+        .vsd-s-complete .vsd-vent-dot {
+          background: var(--vsd-glow);
+        }
+        .vsd-s-sensing .vsd-vent-dot {
+          animation: vsd-dot 1.2s cubic-bezier(.25,1,.5,1) infinite;
+        }
+        .vsd-s-sensing .vsd-vent-dot:nth-child(2) { animation-delay: .12s; }
+        .vsd-s-sensing .vsd-vent-dot:nth-child(3) { animation-delay: .24s; }
+        .vsd-s-sensing .vsd-vent-dot:nth-child(4) { animation-delay: .36s; }
+        .vsd-s-sensing .vsd-vent-dot:nth-child(5) { animation-delay: .48s; }
+        @keyframes vsd-dot {
+          0%, 100% { box-shadow: none; opacity: .45; }
+          50%      { box-shadow: 0 0 10px 0 var(--vsd-glow); opacity: 1; }
+        }
+
+        /* ② 束腰液仓 */
+        .vsd-waist {
+          position: relative;
+          width: 168px;
+          height: 62px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 14px;
+          border-top: 1px solid rgba(196,196,196,.14);
+          border-bottom: 1px solid rgba(196,196,196,.14);
+        }
+
+        /* 三元映射：三枚小三角，随阶段依次点亮（体现三元映射的视觉语言） */
+        .vsd-tri {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+        }
+        .vsd-tri span {
+          width: 0;
+          height: 0;
+          border-left: 5px solid transparent;
+          border-right: 5px solid transparent;
+          border-top: 8px solid rgba(247,246,242,.2);
+          transition: border-top-color .5s cubic-bezier(.25,1,.5,1);
+        }
+        .vsd-s-sensing .vsd-tri-a,
+        .vsd-s-prescribing .vsd-tri-a,
+        .vsd-s-prescribing .vsd-tri-b,
+        .vsd-s-blending .vsd-tri-a,
+        .vsd-s-blending .vsd-tri-b,
+        .vsd-s-blending .vsd-tri-c,
+        .vsd-s-releasing .vsd-tri span,
+        .vsd-s-complete .vsd-tri span {
+          border-top-color: var(--vsd-glow);
+        }
+
+        /* 液压表 */
+        .vsd-gauge-svg { width: 42px; height: 42px; display: block; }
+        .vsd-gauge-track,
+        .vsd-gauge-tick { stroke: rgba(247,246,242,.22); }
+        .vsd-gauge-needle {
+          stroke: rgba(247,246,242,.75);
+          transform-origin: 24px 24px;
+          transform: rotate(var(--vsd-needle));
+          transition: transform 1.4s cubic-bezier(.25,1,.5,1);
+        }
+        .vsd-s-prescribing .vsd-gauge-needle {
+          animation: vsd-needle 1.6s cubic-bezier(.25,1,.5,1) infinite alternate;
+        }
+        @keyframes vsd-needle {
+          from { transform: rotate(-205deg); }
+          to   { transform: rotate(-120deg); }
+        }
+        .vsd-gauge-hub { fill: rgba(247,246,242,.55); }
+
+        /* 液仓余量视窗 */
+        .vsd-reserve {
+          position: relative;
+          width: 16px;
+          height: 40px;
+          border: 1px solid rgba(196,196,196,.3);
+          background: rgba(247,246,242,.05);
+          display: flex;
+          align-items: flex-end;
+          overflow: hidden;
+        }
+        .vsd-reserve-fill {
+          width: 100%;
+          transition: height 1.2s cubic-bezier(.25,1,.5,1),
+            background 1.2s cubic-bezier(.25,1,.5,1);
+        }
+
+        /* ③ 底座 */
+        .vsd-base {
+          position: relative;
+          width: 100%;
+          height: 156px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding-top: 14px;
         }
         .vsd-mark {
           width: 0;
           height: 0;
-          border-left: 9px solid transparent;
-          border-right: 9px solid transparent;
-          border-top: 14px solid #C4C4C4;
+          border-left: 8px solid transparent;
+          border-right: 8px solid transparent;
+          border-top: 12px solid #C4C4C4;
         }
         .vsd-brand {
-          margin-top: 14px;
+          margin-top: 10px;
           font-family: Georgia, 'Times New Roman', serif;
-          font-size: 15px;
+          font-size: 14px;
           color: #F7F6F2;
           letter-spacing: .04em;
+        }
+
+        /* 风道：三叶风扇 + 检测环 */
+        .vsd-duct {
+          margin-top: 10px;
+          width: 48px;
+          height: 48px;
+        }
+        .vsd-duct-svg { width: 48px; height: 48px; display: block; }
+        .vsd-duct-housing { stroke: rgba(196,196,196,.3); }
+        .vsd-blade {
+          fill: rgba(247,246,242,.16);
+          transition: fill .6s cubic-bezier(.25,1,.5,1);
+        }
+        .vsd-hub { fill: rgba(247,246,242,.3); }
+        .vsd-s-prescribing .vsd-blade,
+        .vsd-s-blending .vsd-blade,
+        .vsd-s-releasing .vsd-blade,
+        .vsd-s-complete .vsd-blade {
+          fill: var(--vsd-glow);
+          opacity: .55;
+        }
+        /* prescribing 才真正转起来 */
+        .vsd-s-prescribing .vsd-blades {
+          transform-origin: 24px 24px;
+          animation: vsd-spin 1.1s linear infinite;
+        }
+        @keyframes vsd-spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+
+        /* 检测环：sensing 时扫过一圈 */
+        .vsd-detect {
+          stroke: #C8D6AF;
+          opacity: 0;
+          transform-origin: 24px 24px;
+        }
+        .vsd-s-sensing .vsd-detect {
+          opacity: 1;
+          stroke-dasharray: 26 106;
+          animation: vsd-detect 1.4s linear infinite;
+        }
+        @keyframes vsd-detect {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        /* 分析中风扇在转，检测环换成常显细环 */
+        .vsd-s-prescribing .vsd-detect {
+          opacity: .5;
+          stroke-dasharray: none;
+        }
+
+        /* 散热格栅 */
+        .vsd-base-slats {
+          position: absolute;
+          bottom: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 4px;
+        }
+        .vsd-base-slat {
+          width: 22px;
+          height: 2px;
+          background: rgba(247,246,242,.1);
+          transition: background .6s cubic-bezier(.25,1,.5,1);
+        }
+        .vsd-s-releasing .vsd-base-slat,
+        .vsd-s-complete .vsd-base-slat {
+          background: rgba(247,246,242,.24);
         }
 
         /* ── 感知扫描线（sensing） ── */
@@ -329,6 +696,7 @@ export default function VirtualScentDevice({
           height: 34px;
           top: -34px;
           pointer-events: none;
+          z-index: 2;
           opacity: 0;
           background: linear-gradient(
             to bottom,
@@ -340,34 +708,11 @@ export default function VirtualScentDevice({
         }
         .vsd-s-sensing .vsd-scan {
           opacity: 1;
-          animation: vsd-sweep 1.5s cubic-bezier(.45,0,.55,1) infinite;
+          animation: vsd-sweep 1.6s cubic-bezier(.45,0,.55,1) infinite;
         }
         @keyframes vsd-sweep {
           0%   { top: -34px; }
-          100% { top: 196px; }
-        }
-
-        /* ── 分析环（prescribing） ── */
-        .vsd-ring {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: 92px;
-          height: 92px;
-          margin: -46px 0 0 -46px;
-          border: 1px solid rgba(200,214,175,.45);
-          border-top-color: #C8D6AF;
-          border-radius: 50%;
-          opacity: 0;
-          pointer-events: none;
-        }
-        .vsd-s-prescribing .vsd-ring {
-          opacity: 1;
-          animation: vsd-spin 1.5s linear infinite;
-        }
-        @keyframes vsd-spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
+          100% { top: 292px; }
         }
 
         /* 分析中让品牌字轻微呼吸，区别于待机 */
@@ -520,13 +865,53 @@ export default function VirtualScentDevice({
           100% { opacity: 1; }
         }
 
+        /* ── 释放完成后的日记入口 ── */
+        .vsd-diary {
+          margin-top: 18px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          animation: vsd-in .7s cubic-bezier(.25,1,.5,1) both;
+        }
+        @keyframes vsd-in {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .vsd-diary-quote {
+          font-family: Georgia, 'Times New Roman', serif;
+          font-style: italic;
+          font-size: 10px;
+          color: rgba(13,13,13,.45);
+          letter-spacing: .04em;
+        }
+        .vsd-diary-btn {
+          display: inline-block;
+          border: 1px solid #0D0D0D;
+          padding: 11px 30px;
+          font-size: 9px;
+          letter-spacing: .24em;
+          color: #0D0D0D;
+          background: transparent;
+          text-decoration: none;
+          transition: background .4s cubic-bezier(.25,1,.5,1),
+            color .4s cubic-bezier(.25,1,.5,1);
+        }
+        .vsd-diary-btn:hover {
+          background: #0D0D0D;
+          color: #F7F6F2;
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          .vsd-scan, .vsd-ring, .vsd-mist, .vsd-ambient,
-          .vsd-brand, .vsd-cap-state, .vsd-fill-blend, .vsd-pct-blend {
+          .vsd-scan, .vsd-mist, .vsd-ambient, .vsd-brand,
+          .vsd-cap-state, .vsd-fill-blend, .vsd-pct-blend,
+          .vsd-vent-dot, .vsd-blades, .vsd-detect, .vsd-gauge-needle,
+          .vsd-diary {
             animation: none !important;
           }
-          .vsd-s-scan { opacity: .5; }
-          .vsd-s-prescribing .vsd-ring { opacity: .6; }
+          .vsd-s-sensing .vsd-scan { opacity: .5; }
+          .vsd-s-prescribing .vsd-detect { opacity: .6; }
+          .vsd-s-sensing .vsd-vent-dot { opacity: 1; }
         }
       `}</style>
     </div>
